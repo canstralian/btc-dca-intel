@@ -191,6 +191,7 @@ export default function RunSimulation() {
         headers: {
           'Content-Type': 'application/json',
           // For production, obtain API keys via a secure endpoint or user auth
+          'x-api-key': process.env.REACT_APP_API_KEY // Example for Create React App
         },
         body: JSON.stringify(payload)
       });
