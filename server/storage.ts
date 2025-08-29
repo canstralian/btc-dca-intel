@@ -192,17 +192,25 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     return result[0];
-  },
+  }
+
+  async saveMarketData(data: InsertMarketData): Promise<MarketData> {
+    const [marketDataRecord] = await db
+      .insert(marketData)
+      .values(data)
+      .returning();
+    return marketDataRecord;
+  }
 
   // Project methods
   async getProjects(): Promise<Project[]> {
     return await db.select().from(projects).orderBy(desc(projects.createdAt));
-  },
+  }
 
   async getProject(id: string): Promise<Project | undefined> {
     const result = await db.select().from(projects).where(eq(projects.id, id));
     return result[0];
-  },
+  }
 
   async createProject(project: InsertProject): Promise<Project> {
     const result = await db.insert(projects).values({
@@ -211,7 +219,7 @@ export class DatabaseStorage implements IStorage {
     }).returning();
 
     return result[0];
-  },
+  }
 
   async updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined> {
     const result = await db
@@ -221,7 +229,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result[0];
-  },
+  }
 
   // Ticket methods
   async getTickets(projectId?: string): Promise<Ticket[]> {
@@ -232,12 +240,12 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await query.orderBy(desc(tickets.createdAt));
-  },
+  }
 
   async getTicket(id: string): Promise<Ticket | undefined> {
     const result = await db.select().from(tickets).where(eq(tickets.id, id));
     return result[0];
-  },
+  }
 
   async createTicket(ticket: InsertTicket): Promise<Ticket> {
     const result = await db.insert(tickets).values({
@@ -246,7 +254,7 @@ export class DatabaseStorage implements IStorage {
     }).returning();
 
     return result[0];
-  },
+  }
 
   async updateTicket(id: string, ticket: Partial<InsertTicket>): Promise<Ticket | undefined> {
     const result = await db
@@ -256,7 +264,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result[0];
-  },
+  }
 
   // Ticket comment methods
   async getTicketComments(ticketId: string): Promise<TicketComment[]> {
@@ -265,7 +273,7 @@ export class DatabaseStorage implements IStorage {
       .from(ticketComments)
       .where(eq(ticketComments.ticketId, ticketId))
       .orderBy(desc(ticketComments.createdAt));
-  },
+  }
 
   async createTicketComment(comment: InsertTicketComment): Promise<TicketComment> {
     const result = await db.insert(ticketComments).values({
@@ -274,7 +282,7 @@ export class DatabaseStorage implements IStorage {
     }).returning();
 
     return result[0];
-  },
+  }
 };
 
 export const storage = new DatabaseStorage();
