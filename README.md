@@ -244,7 +244,7 @@ async def simulate(payload: SimPayload, x_api_key: Optional[str] = Header(None))
       - Simple API key required (replace with OAuth2/JWT for production).
       - Keep handler short; for long simulations push to a background queue (Celery/RQ).
     """
-    if x_api_key != "REPLACE_WITH_SECURE_KEY":
+    if x_api_key != os.getenv("API_KEY"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
     # Toy simulation - replace with the real trading_engine logic
