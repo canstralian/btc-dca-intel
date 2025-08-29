@@ -2,17 +2,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Wallet, PiggyBank, TrendingUp, Calculator } from "lucide-react";
-
-interface Portfolio {
-  totalBTC: string;
-  totalInvested: string;
-  totalValue?: number;
-  unrealizedPL?: number;
-  avgCost?: number;
-}
+import { type Portfolio } from "@shared/schema";
 
 export function PortfolioAnalytics() {
-  const { data: portfolio, isLoading } = useQuery({
+  const { data: portfolio, isLoading } = useQuery<Portfolio>({
     queryKey: ["/api/portfolio"],
     refetchInterval: 60000, // Refetch every minute
   });
