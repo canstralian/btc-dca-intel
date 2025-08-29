@@ -188,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simulation endpoint
+  // ML-Enhanced Simulation endpoint
   app.post("/api/simulate-dca", async (req, res) => {
     try {
       const { startDate, endDate, amount } = req.body;
@@ -217,6 +217,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to run simulation" });
+    }
+  });
+
+  // ML Price Prediction endpoint
+  app.post("/api/ml/predict-price", async (req, res) => {
+    try {
+      const { days_ahead = 7, model_type = "lstm" } = req.body;
+      
+      // Call ML service
+      const response = await fetch("http://localhost:8001/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days_ahead, model_type })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`ML service responded with ${response.status}`);
+      }
+      
+      const prediction = await response.json();
+      res.json(prediction);
+    } catch (error) {
+      console.error("ML prediction error:", error);
+      res.status(500).json({ error: "Failed to get price prediction" });
+    }
+  });
+
+  // ML DCA Optimization endpoint
+  app.post("/api/ml/optimize-dca", async (req, res) => {
+    try {
+      const { investment_amount, duration_months, risk_tolerance = "medium" } = req.body;
+      
+      if (!investment_amount || !duration_months) {
+        return res.status(400).json({ error: "Missing required parameters" });
+      }
+      
+      // Call ML service
+      const response = await fetch("http://localhost:8001/optimize-dca", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ investment_amount, duration_months, risk_tolerance })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`ML service responded with ${response.status}`);
+      }
+      
+      const optimization = await response.json();
+      res.json(optimization);
+    } catch (error) {
+      console.error("ML optimization error:", error);
+      res.status(500).json({ error: "Failed to optimize DCA strategy" });
+    }
+  });
+
+  // ML Model Performance endpoint
+  app.get("/api/ml/model-performance", async (req, res) => {
+    try {
+      const response = await fetch("http://localhost:8001/model-performance");
+      
+      if (!response.ok) {
+        throw new Error(`ML service responded with ${response.status}`);
+      }
+      
+      const performance = await response.json();
+      res.json(performance);
+    } catch (error) {
+      console.error("ML performance error:", error);
+      res.status(500).json({ error: "Failed to get model performance" });
     }
   });
 

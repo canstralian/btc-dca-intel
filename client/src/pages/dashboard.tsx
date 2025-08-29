@@ -10,6 +10,8 @@ import { MarketSignals } from "@/components/market-signals";
 import { AutomatedDCA } from "@/components/automated-dca";
 import { PerformanceAnalytics } from "@/components/performance-analytics";
 import { AdvancedTools } from "@/components/advanced-tools";
+import { MLPredictions } from "@/components/ml-predictions";
+import { MLDCAOptimizer } from "@/components/ml-dca-optimizer";
 
 export default function Dashboard() {
   return (
@@ -89,7 +91,19 @@ export default function Dashboard() {
         </div>
 
         {/* Performance Analytics */}
-        <PerformanceAnalytics />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <SimulationPanel />
+            <StrategyComparison />
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <MLPredictions />
+            <MLDCAOptimizer />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            <PerformanceAnalytics />
+          </div>
 
         {/* Advanced Tools */}
         <AdvancedTools />
