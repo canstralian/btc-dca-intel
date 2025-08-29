@@ -1,6 +1,7 @@
 import { 
   type User, 
-  type InsertUser, 
+  type InsertUser,
+  type UpsertUser,
   type DCAStrategy, 
   type InsertDCAStrategy,
   type DCATransaction,
@@ -8,13 +9,22 @@ import {
   type Portfolio,
   type InsertPortfolio,
   type MarketData,
-  type InsertMarketData
+  type InsertMarketData,
+  users,
+  dcaStrategies,
+  dcaTransactions,
+  portfolios,
+  marketData
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   // User methods
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
@@ -37,131 +47,134 @@ export interface IStorage {
   saveMarketData(data: InsertMarketData): Promise<MarketData>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private dcaStrategies: Map<string, DCAStrategy>;
-  private dcaTransactions: Map<string, DCATransaction>;
-  private portfolios: Map<string, Portfolio>;
-  private marketData: Map<string, MarketData>;
-
-  constructor() {
-    this.users = new Map();
-    this.dcaStrategies = new Map();
-    this.dcaTransactions = new Map();
-    this.portfolios = new Map();
-    this.marketData = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    // Note: For Replit Auth, we don't use username-based lookup
+    // This method is kept for interface compatibility
+    return undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     
     // Create default portfolio for new user
-    const portfolio: Portfolio = {
-      id: randomUUID(),
-      userId: id,
+    await db.insert(portfolios).values({
+      userId: user.id,
       totalBTC: '0',
       totalInvested: '0',
-      updatedAt: new Date(),
-    };
-    this.portfolios.set(id, portfolio);
+    });
     
     return user;
   }
 
   async getDCAStrategies(userId: string): Promise<DCAStrategy[]> {
-    return Array.from(this.dcaStrategies.values()).filter(
-      (strategy) => strategy.userId === userId
-    );
+    return await db.select().from(dcaStrategies).where(eq(dcaStrategies.userId, userId));
   }
 
   async getDCAStrategy(id: string): Promise<DCAStrategy | undefined> {
-    return this.dcaStrategies.get(id);
+    const [strategy] = await db.select().from(dcaStrategies).where(eq(dcaStrategies.id, id));
+    return strategy || undefined;
   }
 
   async createDCAStrategy(strategy: InsertDCAStrategy & { userId: string }): Promise<DCAStrategy> {
-    const id = randomUUID();
-    const dcaStrategy: DCAStrategy = {
-      ...strategy,
-      id,
-      createdAt: new Date(),
-    };
-    this.dcaStrategies.set(id, dcaStrategy);
+    const [dcaStrategy] = await db
+      .insert(dcaStrategies)
+      .values(strategy)
+      .returning();
     return dcaStrategy;
   }
 
   async updateDCAStrategy(id: string, updates: Partial<InsertDCAStrategy>): Promise<DCAStrategy | undefined> {
-    const strategy = this.dcaStrategies.get(id);
-    if (!strategy) return undefined;
-
-    const updatedStrategy = { ...strategy, ...updates };
-    this.dcaStrategies.set(id, updatedStrategy);
-    return updatedStrategy;
+    const [updatedStrategy] = await db
+      .update(dcaStrategies)
+      .set(updates)
+      .where(eq(dcaStrategies.id, id))
+      .returning();
+    return updatedStrategy || undefined;
   }
 
   async getDCATransactions(strategyId: string): Promise<DCATransaction[]> {
-    return Array.from(this.dcaTransactions.values()).filter(
-      (transaction) => transaction.strategyId === strategyId
-    );
+    return await db.select().from(dcaTransactions).where(eq(dcaTransactions.strategyId, strategyId));
   }
 
   async createDCATransaction(transaction: InsertDCATransaction): Promise<DCATransaction> {
-    const id = randomUUID();
-    const dcaTransaction: DCATransaction = {
-      ...transaction,
-      id,
-      executedAt: new Date(),
-    };
-    this.dcaTransactions.set(id, dcaTransaction);
+    const [dcaTransaction] = await db
+      .insert(dcaTransactions)
+      .values(transaction)
+      .returning();
     return dcaTransaction;
   }
 
   async getPortfolio(userId: string): Promise<Portfolio | undefined> {
-    return this.portfolios.get(userId);
+    const [portfolio] = await db.select().from(portfolios).where(eq(portfolios.userId, userId));
+    return portfolio || undefined;
   }
 
   async updatePortfolio(userId: string, updates: Partial<InsertPortfolio>): Promise<Portfolio> {
-    const portfolio = this.portfolios.get(userId);
-    const updatedPortfolio: Portfolio = {
-      id: portfolio?.id || randomUUID(),
-      userId,
-      totalBTC: updates.totalBTC || portfolio?.totalBTC || '0',
-      totalInvested: updates.totalInvested || portfolio?.totalInvested || '0',
-      updatedAt: new Date(),
-    };
-    this.portfolios.set(userId, updatedPortfolio);
-    return updatedPortfolio;
+    const [updatedPortfolio] = await db
+      .update(portfolios)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(portfolios.userId, userId))
+      .returning();
+    
+    if (updatedPortfolio) {
+      return updatedPortfolio;
+    }
+    
+    // If portfolio doesn't exist, create it
+    const [newPortfolio] = await db
+      .insert(portfolios)
+      .values({
+        userId,
+        totalBTC: updates.totalBTC || '0',
+        totalInvested: updates.totalInvested || '0',
+      })
+      .returning();
+    
+    return newPortfolio;
   }
 
   async getLatestMarketData(symbol: string): Promise<MarketData | undefined> {
-    const symbolData = Array.from(this.marketData.values())
-      .filter(data => data.symbol === symbol)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const [data] = await db
+      .select()
+      .from(marketData)
+      .where(eq(marketData.symbol, symbol))
+      .orderBy(desc(marketData.timestamp))
+      .limit(1);
     
-    return symbolData[0];
+    return data || undefined;
   }
 
   async saveMarketData(data: InsertMarketData): Promise<MarketData> {
-    const id = randomUUID();
-    const marketData: MarketData = {
-      ...data,
-      id,
-      timestamp: new Date(),
-    };
-    this.marketData.set(id, marketData);
-    return marketData;
+    const [savedData] = await db
+      .insert(marketData)
+      .values(data)
+      .returning();
+    return savedData;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

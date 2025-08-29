@@ -2,9 +2,24 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDCAStrategySchema, insertDCATransactionSchema, insertMarketDataSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
   // Market data routes
   app.get("/api/market/:symbol", async (req, res) => {
     try {
@@ -81,10 +96,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DCA Strategy routes
-  app.post("/api/dca-strategies", async (req, res) => {
+  app.post("/api/dca-strategies", isAuthenticated, async (req: any, res) => {
     try {
       const validatedData = insertDCAStrategySchema.parse(req.body);
-      const userId = req.headers['x-user-id'] as string || 'demo-user';
+      const userId = req.user?.claims?.sub;
       
       const strategy = await storage.createDCAStrategy({
         ...validatedData,
@@ -101,9 +116,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dca-strategies", async (req, res) => {
+  app.get("/api/dca-strategies", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.headers['x-user-id'] as string || 'demo-user';
+      const userId = req.user?.claims?.sub;
       const strategies = await storage.getDCAStrategies(userId);
       res.json(strategies);
     } catch (error) {
@@ -153,9 +168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Portfolio route
-  app.get("/api/portfolio", async (req, res) => {
+  app.get("/api/portfolio", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.headers['x-user-id'] as string || 'demo-user';
+      const userId = req.user?.claims?.sub;
       const portfolio = await storage.getPortfolio(userId);
       
       if (!portfolio) {
