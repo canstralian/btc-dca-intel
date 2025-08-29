@@ -9,6 +9,7 @@ export function MarketOverview() {
 
   const formatNumber = (num: string | number, decimals = 2) => {
     const value = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(value) || value == null) return '0';
     return value.toLocaleString('en-US', { 
       minimumFractionDigits: decimals, 
       maximumFractionDigits: decimals 
@@ -17,6 +18,7 @@ export function MarketOverview() {
 
   const formatLargeNumber = (num: string | number) => {
     const value = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(value) || value == null) return '$0';
     if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
     if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
     return `$${formatNumber(value)}`;

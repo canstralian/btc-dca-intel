@@ -135,6 +135,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing required parameters" });
       }
       
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ error: "Invalid amount: must be a positive number" });
+      }
+      
       // Calculate frequency multiplier
       const frequencyMap = {
         'weekly': 52,
@@ -144,7 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const purchasesPerYear = frequencyMap[frequency as keyof typeof frequencyMap] || 12;
       const totalPurchases = Math.floor((duration / 12) * purchasesPerYear);
-      const totalInvestment = parseFloat(amount) * totalPurchases;
+      const totalInvestment = parsedAmount * totalPurchases;
       
       // Get current BTC price for projection
       const btcData = await storage.getLatestMarketData('BITCOIN');
@@ -160,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectedValue,
         potentialReturn,
         totalPurchases,
-        avgPurchaseAmount: parseFloat(amount),
+        avgPurchaseAmount: parsedAmount,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to calculate DCA strategy" });
@@ -197,9 +202,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing required parameters" });
       }
       
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ error: "Invalid amount: must be a positive number" });
+      }
+      
       // This is a simplified simulation - in production you'd use historical price data
       const monthsInPeriod = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24 * 30));
-      const totalInvested = parseFloat(amount) * monthsInPeriod;
+      const totalInvested = parsedAmount * monthsInPeriod;
       
       // Mock simulation results
       const totalReturn = 34.7;

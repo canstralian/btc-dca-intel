@@ -25,6 +25,7 @@ export const fetchBitcoinPrice = async (): Promise<BitcoinPrice> => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
     
     if (!response.ok) {
@@ -46,6 +47,7 @@ export const fetchPriceHistory = async (days: string = "30"): Promise<PriceHisto
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
     
     if (!response.ok) {
@@ -67,6 +69,7 @@ export const fetchFearGreedIndex = async (): Promise<FearGreedIndex> => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
     
     if (!response.ok) {

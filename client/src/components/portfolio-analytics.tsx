@@ -12,11 +12,13 @@ export function PortfolioAnalytics() {
 
   const formatCurrency = (value: string | number) => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num) || num == null) return '$0.00';
     return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   };
 
   const formatBTC = (value: string | number) => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num) || num == null) return '0.0000 BTC';
     return `${num.toFixed(4)} BTC`;
   };
 
@@ -24,13 +26,13 @@ export function PortfolioAnalytics() {
     `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
 
   // Mock calculations for demo
-  const totalBTC = parseFloat(portfolio?.totalBTC || '1.2847');
-  const totalInvested = parseFloat(portfolio?.totalInvested || '42500');
+  const totalBTC = parseFloat(portfolio?.totalBTC || '1.2847') || 0;
+  const totalInvested = parseFloat(portfolio?.totalInvested || '42500') || 0;
   const currentBTCPrice = 43287; // This would come from market data
   const totalValue = totalBTC * currentBTCPrice;
   const unrealizedPL = totalValue - totalInvested;
-  const unrealizedPLPercent = (unrealizedPL / totalInvested) * 100;
-  const avgCost = totalInvested / totalBTC;
+  const unrealizedPLPercent = totalInvested > 0 ? (unrealizedPL / totalInvested) * 100 : 0;
+  const avgCost = totalBTC > 0 ? totalInvested / totalBTC : 0;
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
