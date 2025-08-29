@@ -384,7 +384,7 @@ btc-dca-trading-system/
 - Example .env (not to be committed):
 ```
 DATABASE_URL=postgres://user:pass@localhost:5432/dcalytics
-API_KEY=REPLACE_WITH_SECURE_KEY
+API_KEY=your_securely_generated_api_key_here
 ```
 - Recommend PostgreSQL for production, use SQLAlchemy (or async SQLModel) and connection pooling.
 
