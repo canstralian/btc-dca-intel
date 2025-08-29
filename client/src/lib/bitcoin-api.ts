@@ -19,25 +19,64 @@ export interface FearGreedIndex {
 }
 
 export const fetchBitcoinPrice = async (): Promise<BitcoinPrice> => {
-  const response = await fetch('/api/market/bitcoin');
-  if (!response.ok) {
+  try {
+    const response = await fetch('/api/market/bitcoin', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching Bitcoin price:', error);
     throw new Error('Failed to fetch Bitcoin price');
   }
-  return response.json();
 };
 
 export const fetchPriceHistory = async (days: string = "30"): Promise<PriceHistoryPoint[]> => {
-  const response = await fetch(`/api/market/bitcoin/history?days=${days}`);
-  if (!response.ok) {
+  try {
+    const response = await fetch(`/api/market/bitcoin/history?days=${days}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching price history:', error);
     throw new Error('Failed to fetch price history');
   }
-  return response.json();
 };
 
 export const fetchFearGreedIndex = async (): Promise<FearGreedIndex> => {
-  const response = await fetch('/api/fear-greed');
-  if (!response.ok) {
+  try {
+    const response = await fetch('/api/fear-greed', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching Fear & Greed index:', error);
     throw new Error('Failed to fetch Fear & Greed index');
   }
-  return response.json();
 };
