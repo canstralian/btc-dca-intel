@@ -356,7 +356,7 @@ Encouraging collaboration:
 ## Project Structure
 
 ```
-dcalytics/
+btc-dca-trading-system/
 ├── backend/                 # FastAPI or Flask backend
 │   ├── main.py              # API routes (FastAPI example)
 │   ├── flask_app.py         # Flask alternative
