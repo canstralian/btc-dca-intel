@@ -12,6 +12,8 @@ import { PerformanceAnalytics } from "@/components/performance-analytics";
 import { AdvancedTools } from "@/components/advanced-tools";
 import { MLPredictions } from "@/components/ml-predictions";
 import { MLDCAOptimizer } from "@/components/ml-dca-optimizer";
+import { TicketingSystem } from "@/components/ticketing-system"; // Assuming TicketingSystem component is created
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
   return (
@@ -107,6 +109,61 @@ export default function Dashboard() {
 
         {/* Advanced Tools */}
         <AdvancedTools />
+
+        {/* Ticketing System Section */}
+        <Tabs defaultValue="performance-analytics" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="market-overview">Market Overview</TabsTrigger>
+            <TabsTrigger value="ml-optimizer">ML DCA Optimizer</TabsTrigger>
+            <TabsTrigger value="ticketing">IT Tickets</TabsTrigger>
+          </TabsList>
+          <TabsContent value="market-overview">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <PriceChart />
+              </div>
+              <div>
+                <DCACalculator />
+              </div>
+            </div>
+            <PortfolioAnalytics />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <StrategyComparison />
+              <RiskMetrics />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <TransactionHistory />
+              </div>
+              <div className="lg:col-span-2">
+                <SimulationPanel />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MarketSignals />
+              <AutomatedDCA />
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <SimulationPanel />
+                <StrategyComparison />
+              </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <MLPredictions />
+                <MLDCAOptimizer />
+              </div>
+            <div className="grid grid-cols-1 gap-6">
+                <PerformanceAnalytics />
+            </div>
+            <AdvancedTools />
+          </TabsContent>
+          <TabsContent value="ml-optimizer">
+            <MLDCAOptimizer />
+          </TabsContent>
+
+          <TabsContent value="ticketing">
+            <TicketingSystem />
+          </TabsContent>
+        </Tabs>
 
         {/* Footer */}
         <footer className="border-t border-border pt-6 mt-8">

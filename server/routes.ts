@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDCAStrategySchema, insertDCATransactionSchema, insertMarketDataSchema } from "@shared/schema";
+import { insertDCAStrategySchema, insertDCATransactionSchema, insertMarketDataSchema, insertProjectSchema, insertTicketSchema, insertTicketCommentSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 
@@ -286,6 +286,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("ML performance error:", error);
       res.status(500).json({ error: "Failed to get model performance" });
+    }
+  });
+
+  // Project routes
+  app.get("/api/projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      res.json(projects);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch projects" });
+    }
+  });
+
+  app.post("/api/projects", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertProjectSchema.parse(req.body);
+      const project = await storage.createProject(validatedData);
+      res.json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid input", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create project" });
+      }
+    }
+  });
+
+  app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const project = await storage.getProject(id);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch project" });
+    }
+  });
+
+  app.put("/api/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertProjectSchema.partial().parse(req.body);
+      const project = await storage.updateProject(id, validatedData);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid input", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update project" });
+      }
+    }
+  });
+
+  // Ticket routes
+  app.get("/api/tickets", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.query;
+      const tickets = await storage.getTickets(projectId as string);
+      res.json(tickets);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch tickets" });
+    }
+  });
+
+  app.post("/api/tickets", isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertTicketSchema.parse(req.body);
+      const userId = req.user?.claims?.sub;
+      
+      const ticket = await storage.createTicket({
+        ...validatedData,
+        reportedBy: userId,
+      });
+      
+      res.json(ticket);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid input", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create ticket" });
+      }
+    }
+  });
+
+  app.get("/api/tickets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const ticket = await storage.getTicket(id);
+      
+      if (!ticket) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+      
+      res.json(ticket);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch ticket" });
+    }
+  });
+
+  app.put("/api/tickets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertTicketSchema.partial().parse(req.body);
+      const ticket = await storage.updateTicket(id, validatedData);
+      
+      if (!ticket) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+      
+      res.json(ticket);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid input", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update ticket" });
+      }
+    }
+  });
+
+  // Ticket comment routes
+  app.get("/api/tickets/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const comments = await storage.getTicketComments(id);
+      res.json(comments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch ticket comments" });
+    }
+  });
+
+  app.post("/api/tickets/:id/comments", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertTicketCommentSchema.parse(req.body);
+      const userId = req.user?.claims?.sub;
+      
+      const comment = await storage.createTicketComment({
+        ...validatedData,
+        ticketId: id,
+        userId,
+      });
+      
+      res.json(comment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid input", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create comment" });
+      }
     }
   });
 
