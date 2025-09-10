@@ -40,6 +40,20 @@ export function MLDCAOptimizer() {
   });
 
   const runOptimization = () => {
+    // Client-side validation
+    if (investmentAmount < 100) {
+      return; // Could show a toast notification here
+    }
+    
+    if (durationMonths < 1 || durationMonths > 120) {
+      return; // Could show a toast notification here
+    }
+    
+    const minPurchaseAmount = investmentAmount / (durationMonths * 4);
+    if (minPurchaseAmount < 1) {
+      return; // Investment too small for duration
+    }
+    
     optimization.mutate({
       investment_amount: investmentAmount,
       duration_months: durationMonths,
@@ -156,7 +170,7 @@ export function MLDCAOptimizer() {
           <div className="space-y-4">
             <h3 className="text-md font-medium text-foreground">Optimized Strategy</h3>
             
-            {optimization.data && (
+            {optimization.data && optimization.data.recommended_amount_per_purchase > 0 && (
               <div className="space-y-3">
                 {/* Key Metrics */}
                 <div className="bg-muted rounded-md p-3">

@@ -44,9 +44,9 @@ class PredictionRequest(BaseModel):
     model_type: str = Field(default="lstm", regex="^(lstm|rf|gb|ensemble)$")
 
 class DCAOptimizationRequest(BaseModel):
-    investment_amount: float = Field(gt=0)
-    duration_months: int = Field(ge=1, le=120)
-    risk_tolerance: str = Field(regex="^(low|medium|high)$")
+    investment_amount: float = Field(gt=100, le=10000000, description="Investment amount between $100 and $10M")
+    duration_months: int = Field(ge=1, le=120, description="Duration between 1 and 120 months")
+    risk_tolerance: str = Field(regex="^(low|medium|high)$", description="Risk tolerance level")
     
 class MarketData(BaseModel):
     timestamp: datetime
@@ -152,6 +152,13 @@ class DCAOptimizer:
             "medium": 0.5,
             "high": 0.7
         }
+        self._cache = {}
+        self._cache_ttl = 300  # 5 minutes cache
+        
+    def _get_cache_key(self, price_data, investment_amount, duration_months, risk_tolerance):
+        # Create a cache key based on recent price data and parameters
+        recent_prices_hash = hash(tuple(price_data[-30:]))  # Last 30 days
+        return f"{recent_prices_hash}_{investment_amount}_{duration_months}_{risk_tolerance}"
     
     def calculate_optimal_strategy(self, price_data, investment_amount, duration_months, risk_tolerance):
         # Calculate price volatility
@@ -195,29 +202,45 @@ class DCAOptimizer:
     
     def _monte_carlo_simulation(self, price_data, amount_per_purchase, total_purchases, simulations=1000):
         returns = np.diff(price_data) / price_data[:-1]
-        mean_return = np.mean(returns)
-        std_return = np.std(returns)
+        
+        # Remove outliers for more stable statistics
+        returns_clean = returns[np.abs(returns) < np.percentile(np.abs(returns), 95)]
+        mean_return = np.mean(returns_clean)
+        std_return = np.std(returns_clean)
+        
+        # Use t-distribution for fat tails (more realistic for crypto)
+        from scipy import stats
+        df = 3  # degrees of freedom for heavy tails
         
         simulation_results = []
         
         for _ in range(simulations):
-            portfolio_value = 0
+            total_btc = 0
             total_invested = 0
+            current_price = price_data[-1]
             
             for purchase in range(int(total_purchases)):
-                # Simulate price change
-                random_return = np.random.normal(mean_return, std_return)
-                simulated_price = price_data[-1] * (1 + random_return * (purchase + 1))
+                # Simulate price using t-distribution for more realistic volatility
+                random_return = stats.t.rvs(df, loc=mean_return, scale=std_return)
+                # Cap extreme movements to prevent unrealistic scenarios
+                random_return = np.clip(random_return, -0.5, 2.0)  # -50% to +200% max daily move
+                
+                current_price *= (1 + random_return)
+                current_price = max(current_price, price_data[-1] * 0.1)  # Floor at 10% of current price
                 
                 # Calculate BTC purchased
-                btc_purchased = amount_per_purchase / simulated_price
-                portfolio_value += btc_purchased * price_data[-1]  # Current value
+                btc_purchased = amount_per_purchase / current_price
+                total_btc += btc_purchased
                 total_invested += amount_per_purchase
+            
+            # Final portfolio value at current market price
+            portfolio_value = total_btc * price_data[-1]
             
             if total_invested > 0:
                 simulation_results.append((portfolio_value - total_invested) / total_invested)
         
-        return np.mean(simulation_results)
+        # Return median instead of mean for more robust estimate
+        return np.median(simulation_results)
     
     def _generate_strategy_explanation(self, frequency, volatility, risk_tolerance, expected_return):
         volatility_desc = "high" if volatility > 0.5 else "moderate" if volatility > 0.3 else "low"
@@ -434,6 +457,15 @@ async def optimize_dca_strategy(request: DCAOptimizationRequest):
         if price_data is None:
             raise HTTPException(status_code=503, detail="Models not initialized")
         
+        # Additional validation
+        if len(price_data) < 30:
+            raise HTTPException(status_code=503, detail="Insufficient historical data for optimization")
+        
+        # Validate investment parameters
+        min_purchase_amount = request.investment_amount / (request.duration_months * 4)  # Assuming weekly max
+        if min_purchase_amount < 1:
+            raise HTTPException(status_code=400, detail="Investment amount too small for specified duration")
+        
         result = dca_optimizer.calculate_optimal_strategy(
             price_data,
             request.investment_amount,
@@ -441,11 +473,20 @@ async def optimize_dca_strategy(request: DCAOptimizationRequest):
             request.risk_tolerance
         )
         
+        # Validate result sanity
+        if result["recommended_amount_per_purchase"] <= 0:
+            raise HTTPException(status_code=500, detail="Invalid optimization result")
+        
+        if result["risk_score"] < 0 or result["risk_score"] > 1:
+            raise HTTPException(status_code=500, detail="Invalid risk score calculated")
+        
         return DCAOptimizationResponse(**result)
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"DCA optimization error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Optimization service temporarily unavailable")
 
 @app.get("/health")
 async def health_check():
