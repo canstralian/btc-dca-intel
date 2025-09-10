@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertDCAStrategySchema, insertDCATransactionSchema, insertMarketDataSchema, insertProjectSchema, insertTicketSchema, insertTicketCommentSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
+import { handleError, wrapDatabaseOperation, wrapExternalServiceCall, ExternalServiceError, ValidationError } from "./errorHandler";
 
 // In-memory cache for historical data
 interface HistoricalCacheEntry {
@@ -21,11 +22,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      if (!userId) {
+        throw new ValidationError("User ID not found in token");
+      }
+      
+      const user = await wrapDatabaseOperation(
+        () => storage.getUser(userId),
+        "User fetch"
+      );
+      
+      if (!user) {
+        return res.status(404).json({ 
+          error: "User not found", 
+          code: "USER_NOT_FOUND" 
+        });
+      }
+      
       res.json(user);
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      handleError(error, res, "GET /api/auth/user");
     }
   });
   // Market data routes with intelligent caching and error handling
@@ -298,28 +313,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertDCAStrategySchema.parse(req.body);
       const userId = req.user?.claims?.sub;
       
-      const strategy = await storage.createDCAStrategy({
-        ...validatedData,
-        userId,
-      });
+      if (!userId) {
+        throw new ValidationError("User ID not found in token");
+      }
+      
+      const strategy = await wrapDatabaseOperation(
+        () => storage.createDCAStrategy({
+          ...validatedData,
+          userId,
+        }),
+        "DCA strategy creation"
+      );
       
       res.json(strategy);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid input", details: error.errors });
-      } else {
-        res.status(500).json({ error: "Failed to create DCA strategy" });
-      }
+      handleError(error, res, "POST /api/dca-strategies");
     }
   });
 
   app.get("/api/dca-strategies", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const strategies = await storage.getDCAStrategies(userId);
+      
+      if (!userId) {
+        throw new ValidationError("User ID not found in token");
+      }
+      
+      const strategies = await wrapDatabaseOperation(
+        () => storage.getDCAStrategies(userId),
+        "DCA strategies fetch"
+      );
+      
       res.json(strategies);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch DCA strategies" });
+      handleError(error, res, "GET /api/dca-strategies");
     }
   });
 
@@ -373,20 +400,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/portfolio", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const portfolio = await storage.getPortfolio(userId);
+      
+      if (!userId) {
+        throw new ValidationError("User ID not found in token");
+      }
+      
+      const portfolio = await wrapDatabaseOperation(
+        () => storage.getPortfolio(userId),
+        "Portfolio fetch"
+      );
       
       if (!portfolio) {
         // Create default portfolio
-        const newPortfolio = await storage.updatePortfolio(userId, {
-          totalBTC: '1.2847',
-          totalInvested: '42500.00',
-        });
+        const newPortfolio = await wrapDatabaseOperation(
+          () => storage.updatePortfolio(userId, {
+            totalBTC: '1.2847',
+            totalInvested: '42500.00',
+          }),
+          "Default portfolio creation"
+        );
         return res.json(newPortfolio);
       }
       
       res.json(portfolio);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch portfolio" });
+      handleError(error, res, "GET /api/portfolio");
     }
   });
 
