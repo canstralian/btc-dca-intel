@@ -47,8 +47,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/market/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
-      const symbolLower = symbol.toLowerCase();
-      const symbolUpper = symbol.toUpperCase();
+      
+      // Validate symbol parameter
+      if (!symbol || typeof symbol !== 'string' || symbol.trim().length === 0) {
+        return res.status(400).json({ 
+          error: "Invalid symbol parameter", 
+          code: "VALIDATION_ERROR" 
+        });
+      }
+      
+      // Sanitize symbol - only allow alphanumeric characters and common crypto symbols
+      const sanitizedSymbol = symbol.replace(/[^a-zA-Z0-9-]/g, '');
+      if (sanitizedSymbol.length === 0 || sanitizedSymbol.length > 20) {
+        return res.status(400).json({ 
+          error: "Symbol must contain only alphanumeric characters and be 1-20 characters long", 
+          code: "VALIDATION_ERROR" 
+        });
+      }
+      
+      const symbolLower = sanitizedSymbol.toLowerCase();
+      const symbolUpper = sanitizedSymbol.toUpperCase();
       
       // Cache configuration - 3 minutes for production reliability
       const CACHE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
@@ -172,8 +190,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { symbol } = req.params;
       const { days = "30" } = req.query;
-      const symbolLower = symbol.toLowerCase();
-      const symbolUpper = symbol.toUpperCase();
+      
+      // Validate symbol parameter
+      if (!symbol || typeof symbol !== 'string' || symbol.trim().length === 0) {
+        return res.status(400).json({ 
+          error: "Invalid symbol parameter", 
+          code: "VALIDATION_ERROR" 
+        });
+      }
+      
+      // Sanitize symbol
+      const sanitizedSymbol = symbol.replace(/[^a-zA-Z0-9-]/g, '');
+      if (sanitizedSymbol.length === 0 || sanitizedSymbol.length > 20) {
+        return res.status(400).json({ 
+          error: "Symbol must contain only alphanumeric characters and be 1-20 characters long", 
+          code: "VALIDATION_ERROR" 
+        });
+      }
+      
+      // Validate days parameter
+      const daysNumber = parseInt(days as string, 10);
+      if (isNaN(daysNumber) || daysNumber < 1 || daysNumber > 365) {
+        return res.status(400).json({ 
+          error: "Days parameter must be a number between 1 and 365", 
+          code: "VALIDATION_ERROR" 
+        });
+      }
+      
+      const symbolLower = sanitizedSymbol.toLowerCase();
+      const symbolUpper = sanitizedSymbol.toUpperCase();
       
       // Cache configuration - 10 minutes for historical data
       const HISTORY_CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
@@ -356,12 +401,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { amount, frequency, duration } = req.body;
       
       if (!amount || !frequency || !duration) {
-        return res.status(400).json({ error: "Missing required parameters" });
+        return res.status(400).json({ 
+          error: "Missing required parameters: amount, frequency, and duration are required",
+          code: "VALIDATION_ERROR"
+        });
       }
       
-      const parsedAmount = parseFloat(amount);
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        return res.status(400).json({ error: "Invalid amount: must be a positive number" });
+      // Validate and parse amount
+      const parsedAmount = typeof amount === 'number' ? amount : parseFloat(amount);
+      if (isNaN(parsedAmount) || !isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000000) {
+        return res.status(400).json({ 
+          error: "Invalid amount: must be a positive number between 0.01 and 10,000,000",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate frequency
+      const validFrequencies = ['weekly', 'biweekly', 'monthly'];
+      if (!validFrequencies.includes(frequency)) {
+        return res.status(400).json({ 
+          error: "Invalid frequency: must be 'weekly', 'biweekly', or 'monthly'",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate and parse duration
+      const parsedDuration = typeof duration === 'number' ? duration : parseFloat(duration);
+      if (isNaN(parsedDuration) || !isFinite(parsedDuration) || parsedDuration <= 0 || parsedDuration > 120) {
+        return res.status(400).json({ 
+          error: "Invalid duration: must be a positive number of months between 1 and 120",
+          code: "VALIDATION_ERROR"
+        });
       }
       
       // Calculate frequency multiplier
@@ -434,16 +504,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startDate, endDate, amount } = req.body;
       
       if (!startDate || !endDate || !amount) {
-        return res.status(400).json({ error: "Missing required parameters" });
+        return res.status(400).json({ 
+          error: "Missing required parameters: startDate, endDate, and amount are required",
+          code: "VALIDATION_ERROR"
+        });
       }
       
-      const parsedAmount = parseFloat(amount);
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        return res.status(400).json({ error: "Invalid amount: must be a positive number" });
+      // Validate dates
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ 
+          error: "Invalid date format: dates must be valid ISO date strings",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      if (start >= end) {
+        return res.status(400).json({ 
+          error: "Invalid date range: startDate must be before endDate",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate date range not too large (max 10 years)
+      const monthsInPeriod = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+      if (monthsInPeriod <= 0 || monthsInPeriod > 120) {
+        return res.status(400).json({ 
+          error: "Invalid date range: period must be between 1 and 120 months",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate amount
+      const parsedAmount = typeof amount === 'number' ? amount : parseFloat(amount);
+      if (isNaN(parsedAmount) || !isFinite(parsedAmount) || parsedAmount < 0.01 || parsedAmount > 10000000) {
+        return res.status(400).json({ 
+          error: "Invalid amount: must be a number between 0.01 and 10,000,000",
+          code: "VALIDATION_ERROR"
+        });
       }
       
       // This is a simplified simulation - in production you'd use historical price data
-      const monthsInPeriod = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24 * 30));
       const totalInvested = parsedAmount * monthsInPeriod;
       
       // Mock simulation results
@@ -470,22 +573,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { days_ahead = 7, model_type = "lstm" } = req.body;
       
+      // Validate days_ahead parameter
+      const parsedDays = typeof days_ahead === 'number' ? days_ahead : parseInt(days_ahead, 10);
+      if (isNaN(parsedDays) || !isFinite(parsedDays) || parsedDays < 1 || parsedDays > 365) {
+        return res.status(400).json({ 
+          error: "days_ahead must be a number between 1 and 365",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate model_type parameter
+      const validModelTypes = ['lstm', 'rf', 'gb', 'ensemble'];
+      if (!validModelTypes.includes(model_type)) {
+        return res.status(400).json({ 
+          error: "model_type must be one of: lstm, rf, gb, ensemble",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
       // Call ML service
-      const response = await fetch("http://localhost:8001/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days_ahead, model_type })
-      });
+      const response = await wrapExternalServiceCall(
+        () => fetch("http://localhost:8001/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ days_ahead: parsedDays, model_type })
+        }),
+        "ML Prediction Service"
+      );
       
       if (!response.ok) {
-        throw new Error(`ML service responded with ${response.status}`);
+        const errorText = await response.text();
+        throw new ExternalServiceError(
+          `ML service prediction failed: ${response.status}`,
+          response.status
+        );
       }
       
       const prediction = await response.json();
       res.json(prediction);
     } catch (error) {
-      console.error("ML prediction error:", error);
-      res.status(500).json({ error: "Failed to get price prediction" });
+      handleError(error, res, "POST /api/ml/predict-price");
     }
   });
 
@@ -495,25 +622,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { investment_amount, duration_months, risk_tolerance = "medium" } = req.body;
       
       if (!investment_amount || !duration_months) {
-        return res.status(400).json({ error: "Missing required parameters" });
+        return res.status(400).json({ 
+          error: "Missing required parameters: investment_amount and duration_months are required",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate investment_amount
+      const parsedAmount = typeof investment_amount === 'number' ? investment_amount : parseFloat(investment_amount);
+      if (isNaN(parsedAmount) || !isFinite(parsedAmount) || parsedAmount < 100 || parsedAmount > 10000000) {
+        return res.status(400).json({ 
+          error: "investment_amount must be a number between 100 and 10,000,000",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate duration_months
+      const parsedDuration = typeof duration_months === 'number' ? duration_months : parseInt(duration_months, 10);
+      if (isNaN(parsedDuration) || !isFinite(parsedDuration) || parsedDuration < 1 || parsedDuration > 120) {
+        return res.status(400).json({ 
+          error: "duration_months must be a number between 1 and 120",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate risk_tolerance
+      const validRiskLevels = ['low', 'medium', 'high'];
+      if (!validRiskLevels.includes(risk_tolerance)) {
+        return res.status(400).json({ 
+          error: "risk_tolerance must be one of: low, medium, high",
+          code: "VALIDATION_ERROR"
+        });
       }
       
       // Call ML service
-      const response = await fetch("http://localhost:8001/optimize-dca", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ investment_amount, duration_months, risk_tolerance })
-      });
+      const response = await wrapExternalServiceCall(
+        () => fetch("http://localhost:8001/optimize-dca", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            investment_amount: parsedAmount, 
+            duration_months: parsedDuration, 
+            risk_tolerance 
+          })
+        }),
+        "ML DCA Optimization Service"
+      );
       
       if (!response.ok) {
-        throw new Error(`ML service responded with ${response.status}`);
+        const errorText = await response.text();
+        throw new ExternalServiceError(
+          `ML service DCA optimization failed: ${response.status}`,
+          response.status
+        );
       }
       
       const optimization = await response.json();
       res.json(optimization);
     } catch (error) {
-      console.error("ML optimization error:", error);
-      res.status(500).json({ error: "Failed to optimize DCA strategy" });
+      handleError(error, res, "POST /api/ml/optimize-dca");
     }
   });
 
