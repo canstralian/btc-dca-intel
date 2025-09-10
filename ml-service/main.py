@@ -103,7 +103,19 @@ class LSTMPricePredictor:
         return np.array(X), np.array(y)
     
     def train(self, price_data):
+        # Validate input data
+        if price_data is None or len(price_data) < self.lookback_window + 10:
+            raise ValueError(f"Insufficient data for training. Need at least {self.lookback_window + 10} data points, got {len(price_data) if price_data is not None else 0}")
+        
+        # Check for invalid values
+        if np.any(np.isnan(price_data)) or np.any(np.isinf(price_data)) or np.any(price_data <= 0):
+            raise ValueError("Price data contains invalid values (NaN, inf, or negative/zero prices)")
+        
         X, y = self.prepare_data(price_data)
+        
+        if len(X) == 0 or len(y) == 0:
+            raise ValueError("No training samples generated from price data")
+        
         X = X.reshape((X.shape[0], X.shape[1], 1))
         
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -127,6 +139,16 @@ class LSTMPricePredictor:
     def predict(self, recent_data, days_ahead):
         if self.model is None:
             raise ValueError("Model not trained")
+        
+        # Validate input data
+        if recent_data is None or len(recent_data) < self.lookback_window:
+            raise ValueError(f"Insufficient recent data for prediction. Need at least {self.lookback_window} data points, got {len(recent_data) if recent_data is not None else 0}")
+        
+        if np.any(np.isnan(recent_data)) or np.any(np.isinf(recent_data)) or np.any(recent_data <= 0):
+            raise ValueError("Recent data contains invalid values (NaN, inf, or negative/zero prices)")
+        
+        if days_ahead <= 0 or days_ahead > 365:
+            raise ValueError(f"days_ahead must be between 1 and 365, got {days_ahead}")
             
         scaled_recent = self.scaler.transform(recent_data.reshape(-1, 1))
         
@@ -157,12 +179,33 @@ class DCAOptimizer:
         
     def _get_cache_key(self, price_data, investment_amount, duration_months, risk_tolerance):
         # Create a cache key based on recent price data and parameters
-        recent_prices_hash = hash(tuple(price_data[-30:]))  # Last 30 days
+        # Safely get last 30 days or whatever is available
+        recent_prices = price_data[-min(30, len(price_data)):] if len(price_data) > 0 else [0]
+        recent_prices_hash = hash(tuple(recent_prices))
         return f"{recent_prices_hash}_{investment_amount}_{duration_months}_{risk_tolerance}"
     
     def calculate_optimal_strategy(self, price_data, investment_amount, duration_months, risk_tolerance):
+        # Validate inputs
+        if price_data is None or len(price_data) < 30:
+            raise ValueError(f"Insufficient price data for DCA optimization. Need at least 30 data points, got {len(price_data) if price_data is not None else 0}")
+        
+        if np.any(np.isnan(price_data)) or np.any(np.isinf(price_data)) or np.any(price_data <= 0):
+            raise ValueError("Price data contains invalid values")
+        
+        if investment_amount <= 0 or duration_months <= 0:
+            raise ValueError("Investment amount and duration must be positive")
+        
+        if risk_tolerance not in self.volatility_threshold:
+            raise ValueError(f"Invalid risk tolerance: {risk_tolerance}")
+        
         # Calculate price volatility
         returns = np.diff(price_data) / price_data[:-1]
+        
+        # Remove any invalid returns
+        returns = returns[np.isfinite(returns)]
+        if len(returns) == 0:
+            raise ValueError("No valid returns calculated from price data")
+        
         volatility = np.std(returns) * np.sqrt(365)
         
         # Determine frequency based on volatility and risk tolerance
@@ -201,7 +244,16 @@ class DCAOptimizer:
         }
     
     def _monte_carlo_simulation(self, price_data, amount_per_purchase, total_purchases, simulations=1000):
+        # Validate inputs
+        if len(price_data) < 2:
+            raise ValueError("Need at least 2 price points for Monte Carlo simulation")
+        
         returns = np.diff(price_data) / price_data[:-1]
+        
+        # Remove invalid returns
+        returns = returns[np.isfinite(returns)]
+        if len(returns) < 10:
+            raise ValueError("Insufficient valid returns for Monte Carlo simulation")
         
         # Remove outliers for more stable statistics
         returns_clean = returns[np.abs(returns) < np.percentile(np.abs(returns), 95)]
@@ -290,82 +342,148 @@ async def startup_event():
     global price_data, models
     logger.info("Initializing ML models...")
     
-    # Fetch historical data
-    price_data = await fetch_historical_data()
-    
-    # Train LSTM model
     try:
-        lstm_results = lstm_predictor.train(price_data)
-        models['lstm'] = lstm_predictor
-        logger.info(f"LSTM model trained with R² score: {lstm_results['r2']:.3f}")
-    except Exception as e:
-        logger.error(f"Failed to train LSTM model: {e}")
+        # Fetch historical data
+        price_data = await fetch_historical_data()
+        
+        # Validate fetched data
+        if price_data is None or len(price_data) < 100:
+            logger.error(f"Insufficient historical data fetched: {len(price_data) if price_data is not None else 0} points")
+            # Use synthetic data as fallback
+            price_data = generate_synthetic_price_data()
+            logger.warning("Using synthetic data as fallback")
+        
+        logger.info(f"Using {len(price_data)} data points for model training")
+        
+        # Train LSTM model
+        try:
+            lstm_results = lstm_predictor.train(price_data)
+            models['lstm'] = lstm_predictor
+            logger.info(f"LSTM model trained successfully with R² score: {lstm_results['r2']:.3f}")
+        except Exception as e:
+            logger.error(f"Failed to train LSTM model: {e}")
+        
+        # Train traditional ML models
+        try:
+            # Prepare features for traditional models
+            features = create_technical_features(price_data)
+            
+            if len(features) == 0:
+                logger.error("No features generated from price data")
+            else:
+                target = price_data[len(price_data) - len(features):]
+                
+                if len(features) >= 10:  # Need minimum samples for training
+                    # Scale features before training for consistency
+                    scaler_rf = StandardScaler()
+                    scaler_gb = StandardScaler()
+                    
+                    features_scaled_rf = scaler_rf.fit_transform(features)
+                    features_scaled_gb = scaler_gb.fit_transform(features)
+                    
+                    # Ensure consistent train/test splits for both models
+                    X_train_rf, X_test_rf, y_train, y_test = train_test_split(features_scaled_rf, target, test_size=0.2, random_state=42)
+                    X_train_gb, X_test_gb, y_train_gb, y_test_gb = train_test_split(features_scaled_gb, target, test_size=0.2, random_state=42)
+                    
+                    # Random Forest
+                    try:
+                        rf_model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+                        rf_model.fit(X_train_rf, y_train)
+                        rf_score = rf_model.score(X_test_rf, y_test)
+                        models['rf'] = rf_model
+                        scalers['rf'] = scaler_rf  # Use the fitted scaler
+                        logger.info(f"Random Forest model trained with R² score: {rf_score:.3f}")
+                    except Exception as e:
+                        logger.error(f"Failed to train Random Forest model: {e}")
+                    
+                    # Gradient Boosting
+                    try:
+                        gb_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
+                        gb_model.fit(X_train_gb, y_train_gb)
+                        gb_score = gb_model.score(X_test_gb, y_test_gb)
+                        models['gb'] = gb_model
+                        scalers['gb'] = scaler_gb  # Use the fitted scaler
+                        logger.info(f"Gradient Boosting model trained with R² score: {gb_score:.3f}")
+                    except Exception as e:
+                        logger.error(f"Failed to train Gradient Boosting model: {e}")
+                else:
+                    logger.error(f"Insufficient feature samples for training traditional models: {len(features)}")
+        except Exception as e:
+            logger.error(f"Failed to prepare features or train traditional ML models: {e}")
+        
+        # Report final status
+        models_loaded = list(models.keys())
+        logger.info(f"ML service initialization complete. Models loaded: {models_loaded}")
+        
+        if not models_loaded:
+            logger.warning("No models were successfully loaded. Service will have limited functionality.")
     
-    # Train traditional ML models
-    try:
-        # Prepare features for traditional models
-        features = create_technical_features(price_data)
-        target = price_data[len(price_data) - len(features):]
-        
-        X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
-        
-        # Random Forest
-        rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-        rf_model.fit(X_train, y_train)
-        rf_score = rf_model.score(X_test, y_test)
-        models['rf'] = rf_model
-        scalers['rf'] = StandardScaler().fit(features)
-        
-        # Gradient Boosting
-        gb_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
-        gb_model.fit(X_train, y_train)
-        gb_score = gb_model.score(X_test, y_test)
-        models['gb'] = gb_model
-        scalers['gb'] = StandardScaler().fit(features)
-        
-        logger.info(f"RF model trained with R² score: {rf_score:.3f}")
-        logger.info(f"GB model trained with R² score: {gb_score:.3f}")
-        
     except Exception as e:
-        logger.error(f"Failed to train traditional ML models: {e}")
-    
-    logger.info("ML models initialization complete")
+        logger.critical(f"Critical error during ML service startup: {e}")
+        # Don't crash the service, but log the error
+        price_data = generate_synthetic_price_data()
+        logger.warning("Using synthetic data due to startup errors")
 
 def create_technical_features(prices):
     """Create technical analysis features from price data"""
-    df = pd.DataFrame({'price': prices})
+    if len(prices) < 50:  # Need at least 50 points for all features
+        logger.warning(f"Insufficient data for feature creation: {len(prices)} points (need 50+)")
+        return np.array([])
     
-    # Moving averages
-    df['ma_7'] = df['price'].rolling(window=7).mean()
-    df['ma_21'] = df['price'].rolling(window=21).mean()
-    df['ma_50'] = df['price'].rolling(window=50).mean()
-    
-    # Relative Strength Index (RSI)
-    delta = df['price'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    df['rsi'] = 100 - (100 / (1 + rs))
-    
-    # Bollinger Bands
-    df['bb_middle'] = df['price'].rolling(window=20).mean()
-    bb_std = df['price'].rolling(window=20).std()
-    df['bb_upper'] = df['bb_middle'] + (bb_std * 2)
-    df['bb_lower'] = df['bb_middle'] - (bb_std * 2)
-    df['bb_position'] = (df['price'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'])
-    
-    # Volatility
-    df['volatility'] = df['price'].rolling(window=21).std()
-    
-    # Price momentum
-    df['momentum_7'] = df['price'] / df['price'].shift(7) - 1
-    df['momentum_21'] = df['price'] / df['price'].shift(21) - 1
-    
-    # Select features and drop NaN values
-    feature_columns = ['ma_7', 'ma_21', 'ma_50', 'rsi', 'bb_position', 'volatility', 'momentum_7', 'momentum_21']
-    features = df[feature_columns].dropna().values
-    
-    return features
+    try:
+        df = pd.DataFrame({'price': prices})
+        
+        # Moving averages
+        df['ma_7'] = df['price'].rolling(window=7, min_periods=1).mean()
+        df['ma_21'] = df['price'].rolling(window=21, min_periods=1).mean()
+        df['ma_50'] = df['price'].rolling(window=50, min_periods=1).mean()
+        
+        # Relative Strength Index (RSI)
+        delta = df['price'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=1).mean()
+        
+        # Prevent division by zero
+        rs = gain / (loss + 1e-8)  # Add small epsilon to prevent division by zero
+        df['rsi'] = 100 - (100 / (1 + rs))
+        
+        # Bollinger Bands
+        df['bb_middle'] = df['price'].rolling(window=20, min_periods=1).mean()
+        bb_std = df['price'].rolling(window=20, min_periods=1).std()
+        df['bb_upper'] = df['bb_middle'] + (bb_std * 2)
+        df['bb_lower'] = df['bb_middle'] - (bb_std * 2)
+        
+        # Prevent division by zero in bb_position
+        bb_range = df['bb_upper'] - df['bb_lower']
+        df['bb_position'] = np.where(bb_range > 0, 
+                                   (df['price'] - df['bb_lower']) / bb_range, 
+                                   0.5)  # Default to middle position
+        
+        # Volatility
+        df['volatility'] = df['price'].rolling(window=21, min_periods=1).std()
+        
+        # Price momentum
+        df['momentum_7'] = df['price'] / (df['price'].shift(7) + 1e-8) - 1  # Prevent division by zero
+        df['momentum_21'] = df['price'] / (df['price'].shift(21) + 1e-8) - 1
+        
+        # Select features and handle NaN values
+        feature_columns = ['ma_7', 'ma_21', 'ma_50', 'rsi', 'bb_position', 'volatility', 'momentum_7', 'momentum_21']
+        
+        # Replace any remaining NaN or inf values with 0
+        for col in feature_columns:
+            df[col] = df[col].replace([np.inf, -np.inf], 0).fillna(0)
+        
+        features = df[feature_columns].values
+        
+        # Final validation - remove any rows with invalid values
+        valid_rows = np.all(np.isfinite(features), axis=1)
+        features = features[valid_rows]
+        
+        return features
+        
+    except Exception as e:
+        logger.error(f"Error creating technical features: {e}")
+        return np.array([])
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_price(request: PredictionRequest):
