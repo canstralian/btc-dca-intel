@@ -5,6 +5,14 @@ import { insertDCAStrategySchema, insertDCATransactionSchema, insertMarketDataSc
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 
+// In-memory cache for historical data
+interface HistoricalCacheEntry {
+  data: Array<{ timestamp: string; price: number }>;
+  timestamp: number;
+}
+
+const historicalCache = new Map<string, HistoricalCacheEntry>();
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -20,58 +28,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
-  // Market data routes
+  // Market data routes with intelligent caching and error handling
   app.get("/api/market/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
+      const symbolLower = symbol.toLowerCase();
+      const symbolUpper = symbol.toUpperCase();
       
-      // Fetch from CoinGecko API
-      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbol}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
-      const data = await response.json();
+      // Cache configuration - 3 minutes for production reliability
+      const CACHE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
       
-      if (!data[symbol]) {
-        return res.status(404).json({ error: "Symbol not found" });
+      console.log(`[Market API] Fetching data for symbol: ${symbolUpper}`);
+      
+      // Check cache first
+      const cachedData = await storage.getLatestMarketData(symbolUpper);
+      const now = new Date();
+      
+      if (cachedData && cachedData.timestamp) {
+        const cacheAge = now.getTime() - new Date(cachedData.timestamp).getTime();
+        console.log(`[Market API] Cache age for ${symbolUpper}: ${Math.round(cacheAge / 1000)}s`);
+        
+        if (cacheAge < CACHE_DURATION_MS) {
+          console.log(`[Market API] Serving cached data for ${symbolUpper}`);
+          return res.json(cachedData);
+        }
       }
       
-      const marketData = {
-        symbol: symbol.toUpperCase(),
-        price: data[symbol].usd.toString(),
-        change24h: (data[symbol].usd_24h_change || 0).toString(),
-        changePercent24h: (data[symbol].usd_24h_change || 0).toString(),
-        volume24h: (data[symbol].usd_24h_vol || 0).toString(),
-        marketCap: (data[symbol].usd_market_cap || 0).toString(),
-      };
+      // Cache miss or stale - fetch from CoinGecko with retry logic
+      console.log(`[Market API] Cache miss/stale for ${symbolUpper}, fetching from CoinGecko`);
       
-      // Save to storage
-      await storage.saveMarketData(marketData);
+      let lastError: Error | null = null;
+      const maxRetries = 3;
       
-      res.json(marketData);
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          
+          const response = await fetch(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${symbolLower}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`,
+            { 
+              signal: controller.signal,
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'DCAlytics/1.0'
+              }
+            }
+          );
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`CoinGecko API error: ${response.status} ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          console.log(`[Market API] CoinGecko response for ${symbolLower}:`, Object.keys(data));
+          
+          if (!data[symbolLower]) {
+            console.log(`[Market API] Symbol ${symbolLower} not found in CoinGecko response`);
+            
+            // If we have stale cache data, serve it as fallback
+            if (cachedData) {
+              console.log(`[Market API] Serving stale cached data for ${symbolUpper} as fallback`);
+              return res.json(cachedData);
+            }
+            
+            return res.status(404).json({ error: "Symbol not found" });
+          }
+          
+          // Calculate absolute price change from percentage and current price
+          const currentPrice = data[symbolLower].usd;
+          const changePercent = data[symbolLower].usd_24h_change || 0;
+          const absoluteChange = (currentPrice * changePercent) / 100;
+          
+          const marketData = {
+            symbol: symbolUpper,
+            price: currentPrice.toString(),
+            change24h: absoluteChange.toFixed(2), // Absolute USD change
+            changePercent24h: changePercent.toFixed(2), // Percentage change
+            volume24h: (data[symbolLower].usd_24h_vol || 0).toString(),
+            marketCap: (data[symbolLower].usd_market_cap || 0).toString(),
+          };
+          
+          // Save to cache
+          await storage.saveMarketData(marketData);
+          console.log(`[Market API] Successfully fetched and cached data for ${symbolUpper}`);
+          
+          return res.json(marketData);
+          
+        } catch (error) {
+          lastError = error as Error;
+          console.log(`[Market API] Attempt ${attempt}/${maxRetries} failed for ${symbolUpper}:`, error instanceof Error ? error.message : error);
+          
+          if (attempt < maxRetries) {
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, attempt - 1) * 1000;
+            console.log(`[Market API] Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+      
+      // All retries failed - check for fallback options
+      console.error(`[Market API] All attempts failed for ${symbolUpper}:`, lastError?.message);
+      
+      // Serve stale cache as last resort
+      if (cachedData && cachedData.timestamp) {
+        const cacheAge = now.getTime() - new Date(cachedData.timestamp).getTime();
+        console.log(`[Market API] Serving stale cached data (${Math.round(cacheAge / 60000)} min old) for ${symbolUpper}`);
+        return res.json(cachedData);
+      }
+      
+      // No cache available - return error
+      res.status(500).json({ 
+        error: "Failed to fetch market data", 
+        details: lastError?.message || "Unknown error"
+      });
+      
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch market data" });
+      console.error(`[Market API] Unexpected error for ${req.params.symbol}:`, error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  // Historical price data
+  // Historical price data with intelligent caching and error handling
   app.get("/api/market/:symbol/history", async (req, res) => {
     try {
       const { symbol } = req.params;
       const { days = "30" } = req.query;
+      const symbolLower = symbol.toLowerCase();
+      const symbolUpper = symbol.toUpperCase();
       
-      const response = await fetch(`https://api.coingecko.com/api/v3/coins/${symbol}/market_chart?vs_currency=usd&days=${days}`);
-      const data = await response.json();
+      // Cache configuration - 10 minutes for historical data
+      const HISTORY_CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+      const cacheKey = `${symbolLower}:${days}`;
       
-      if (!data.prices) {
-        return res.status(404).json({ error: "Historical data not found" });
+      console.log(`[History API] Fetching historical data for ${symbolUpper} (${days} days)`);
+      
+      // Check in-memory cache first
+      const cachedEntry = historicalCache.get(cacheKey);
+      const now = Date.now();
+      
+      if (cachedEntry) {
+        const cacheAge = now - cachedEntry.timestamp;
+        console.log(`[History API] Cache age for ${cacheKey}: ${Math.round(cacheAge / 1000)}s`);
+        
+        if (cacheAge < HISTORY_CACHE_DURATION_MS) {
+          console.log(`[History API] Serving cached historical data for ${cacheKey}`);
+          return res.json(cachedEntry.data);
+        }
       }
       
-      const formattedData = data.prices.map((price: [number, number]) => ({
-        timestamp: new Date(price[0]).toISOString(),
-        price: price[1],
-      }));
+      console.log(`[History API] Cache miss/stale for ${cacheKey}, fetching from CoinGecko`);
       
-      res.json(formattedData);
+      let lastError: Error | null = null;
+      const maxRetries = 3;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for historical data
+          
+          const response = await fetch(
+            `https://api.coingecko.com/api/v3/coins/${symbolLower}/market_chart?vs_currency=usd&days=${days}`,
+            { 
+              signal: controller.signal,
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'DCAlytics/1.0'
+              }
+            }
+          );
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`CoinGecko History API error: ${response.status} ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          console.log(`[History API] CoinGecko historical response for ${symbolLower}: ${data.prices?.length || 0} price points`);
+          
+          if (!data.prices || !Array.isArray(data.prices)) {
+            console.log(`[History API] No price data found for ${symbolLower}`);
+            
+            // Serve stale cache as fallback for invalid responses
+            if (cachedEntry) {
+              const cacheAge = now - cachedEntry.timestamp;
+              console.log(`[History API] Serving stale cached data (${Math.round(cacheAge / 60000)} min old) due to invalid CoinGecko response for ${cacheKey}`);
+              return res.json(cachedEntry.data);
+            }
+            
+            return res.status(404).json({ error: "Historical data not found" });
+          }
+          
+          const formattedData = data.prices.map((price: [number, number]) => ({
+            timestamp: new Date(price[0]).toISOString(),
+            price: price[1],
+          }));
+          
+          // Cache the successful response
+          historicalCache.set(cacheKey, {
+            data: formattedData,
+            timestamp: now
+          });
+          
+          console.log(`[History API] Successfully fetched and cached ${formattedData.length} historical price points for ${symbolUpper}`);
+          res.json(formattedData);
+          return;
+          
+        } catch (error) {
+          lastError = error as Error;
+          console.log(`[History API] Attempt ${attempt}/${maxRetries} failed for ${symbolUpper}:`, error instanceof Error ? error.message : error);
+          
+          if (attempt < maxRetries) {
+            // Exponential backoff: 2s, 4s, 8s
+            const delay = Math.pow(2, attempt) * 1000;
+            console.log(`[History API] Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+      
+      // All retries failed - check for stale cache fallback
+      console.error(`[History API] All attempts failed for ${symbolUpper}:`, lastError?.message);
+      
+      // Serve stale cache as last resort
+      if (cachedEntry) {
+        const cacheAge = now - cachedEntry.timestamp;
+        console.log(`[History API] Serving stale cached data (${Math.round(cacheAge / 60000)} min old) for ${cacheKey}`);
+        return res.json(cachedEntry.data);
+      }
+      
+      res.status(500).json({ 
+        error: "Failed to fetch historical data", 
+        details: lastError?.message || "Unknown error"
+      });
+      
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch historical data" });
+      console.error(`[History API] Unexpected error for ${req.params.symbol}:`, error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
