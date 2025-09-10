@@ -101,19 +101,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    return await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values(insertUser)
+        .returning();
 
-    // Create default portfolio for new user
-    await db.insert(portfolios).values({
-      userId: user.id,
-      totalBTC: '0',
-      totalInvested: '0',
+      // Create default portfolio for new user
+      await tx.insert(portfolios).values({
+        userId: user.id,
+        totalBTC: '0',
+        totalInvested: '0',
+      });
+
+      return user;
     });
-
-    return user;
   }
 
   async getDCAStrategies(userId: string): Promise<DCAStrategy[]> {
