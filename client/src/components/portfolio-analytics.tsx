@@ -22,12 +22,30 @@ export function PortfolioAnalytics() {
     return `${num.toFixed(4)} BTC`;
   };
 
-  const formatPercentage = (value: number) => 
-    `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+  const formatPercentage = (value?: number | null) => {
+    if (typeof value !== 'number' || isNaN(value) || value == null) return '0.00%';
+    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+  };
 
-  // Mock calculations for demo
-  const totalBTC = parseFloat(portfolio?.totalBTC || '1.2847') || 0;
-  const totalInvested = parseFloat(portfolio?.totalInvested || '42500') || 0;
+  // Safe calculations with proper null checks
+  const totalBTC = (() => {
+    try {
+      const value = parseFloat(portfolio?.totalBTC || '1.2847');
+      return isNaN(value) ? 0 : value;
+    } catch {
+      return 0;
+    }
+  })();
+  
+  const totalInvested = (() => {
+    try {
+      const value = parseFloat(portfolio?.totalInvested || '42500');
+      return isNaN(value) ? 0 : value;
+    } catch {
+      return 0;
+    }
+  })();
+  
   const currentBTCPrice = 43287; // This would come from market data
   const totalValue = totalBTC * currentBTCPrice;
   const unrealizedPL = totalValue - totalInvested;

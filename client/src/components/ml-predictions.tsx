@@ -54,22 +54,52 @@ export function MLPredictions() {
   };
 
   const formatChartData = (data: PredictionData): ChartDataPoint[] => {
-    return data.predicted_prices.map((price, index) => {
-      const date = new Date();
-      date.setDate(date.getDate() + index + 1);
-      
-      return {
-        day: index + 1,
-        predicted: Math.round(price),
-        lower: Math.round(data.confidence_interval.lower[index]),
-        upper: Math.round(data.confidence_interval.upper[index]),
-        date: date.toLocaleDateString(),
-      };
-    });
+    try {
+      if (!data?.predicted_prices || !Array.isArray(data.predicted_prices)) {
+        return [];
+      }
+
+      const { predicted_prices, confidence_interval } = data;
+      const lowerBounds = confidence_interval?.lower || [];
+      const upperBounds = confidence_interval?.upper || [];
+
+      return predicted_prices.map((price, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() + index + 1);
+        
+        const numPrice = (() => {
+          const n = typeof price === 'number' ? price : Number(price);
+          return Number.isFinite(n) ? n : 0;
+        })();
+        const numLower = (() => {
+          if (typeof lowerBounds[index] === 'number') return lowerBounds[index];
+          const n = Number(lowerBounds[index]);
+          return Number.isFinite(n) ? n : numPrice * 0.9;
+        })();
+        const numUpper = (() => {
+          if (typeof upperBounds[index] === 'number') return upperBounds[index];
+          const n = Number(upperBounds[index]);
+          return Number.isFinite(n) ? n : numPrice * 1.1;
+        })();
+        
+        return {
+          day: index + 1,
+          predicted: Math.round(numPrice),
+          lower: Math.round(numLower),
+          upper: Math.round(numUpper),
+          date: date.toLocaleDateString(),
+        };
+      });
+    } catch (error) {
+      console.warn('Error formatting chart data:', error);
+      return [];
+    }
   };
 
-  const formatCurrency = (value: number) => 
-    value?.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formatCurrency = (value?: number | null) => {
+    if (typeof value !== 'number' || isNaN(value) || value == null) return '$0.00';
+    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  };
 
   const getModelBadgeColor = (type: string) => {
     const colors = {
@@ -158,7 +188,10 @@ export function MLPredictions() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Model Accuracy</span>
                 <span className="font-semibold text-accent" data-testid="text-model-accuracy">
-                  {(prediction.data.model_accuracy * 100).toFixed(1)}%
+                  {(() => {
+                    const acc = Number(prediction.data?.model_accuracy);
+                    return Number.isFinite(acc) ? `${(acc * 100).toFixed(1)}%` : 'N/A';
+                  })()}
                 </span>
               </div>
             </div>
@@ -214,14 +247,22 @@ export function MLPredictions() {
               <div className="bg-muted rounded-md p-3 text-center">
                 <div className="text-xs text-muted-foreground mb-1">Price in {daysAhead} days</div>
                 <div className="font-semibold text-lg text-accent" data-testid="text-final-prediction">
-                  {formatCurrency(prediction.data.predicted_prices[prediction.data.predicted_prices.length - 1])}
+                  {(() => {
+                    const lastPrice = prediction.data?.predicted_prices?.at(-1) ?? 0;
+                    return formatCurrency(lastPrice);
+                  })()}
                 </div>
               </div>
               
               <div className="bg-muted rounded-md p-3 text-center">
                 <div className="text-xs text-muted-foreground mb-1">Confidence Range</div>
                 <div className="font-semibold text-sm text-foreground">
-                  {formatCurrency(prediction.data.confidence_interval.lower[prediction.data.confidence_interval.lower.length - 1])} - {formatCurrency(prediction.data.confidence_interval.upper[prediction.data.confidence_interval.upper.length - 1])}
+                  {(() => {
+                    const lastPrice = prediction.data?.predicted_prices?.at(-1) ?? 0;
+                    const lastLower = prediction.data?.confidence_interval?.lower?.at(-1) ?? lastPrice * 0.9;
+                    const lastUpper = prediction.data?.confidence_interval?.upper?.at(-1) ?? lastPrice * 1.1;
+                    return `${formatCurrency(lastLower)} - ${formatCurrency(lastUpper)}`;
+                  })()}
                 </div>
               </div>
               

@@ -10,11 +10,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function DCACalculator() {
   const { amount, setAmount, frequency, setFrequency, duration, setDuration, calculation, calculate } = useDCACalculator();
 
-  const formatCurrency = (value: number) => 
-    value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const formatCurrency = (value?: number | null) => {
+    if (typeof value !== 'number' || isNaN(value) || value == null) return '$0.00';
+    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  };
 
-  const formatPercentage = (value: number) => 
-    `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+  const formatPercentage = (value?: number | null) => {
+    if (typeof value !== 'number' || isNaN(value) || value == null) return '0.00%';
+    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+  };
 
   return (
     <Card data-testid="card-dca-calculator">

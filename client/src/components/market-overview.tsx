@@ -24,7 +24,15 @@ export function MarketOverview() {
     return `$${formatNumber(value)}`;
   };
 
-  const isPositiveChange = btcPrice && parseFloat(btcPrice.changePercent24h) > 0;
+  const isPositiveChange = (() => {
+    try {
+      if (!btcPrice?.changePercent24h) return false;
+      const changePercent = parseFloat(btcPrice.changePercent24h);
+      return !isNaN(changePercent) && changePercent > 0;
+    } catch {
+      return false;
+    }
+  })();
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
