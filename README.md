@@ -1,17 +1,13 @@
+# BTC DCA Intel
 
----
+![CI](https://github.com/canstralian/btc-dca-intel/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Issues](https://img.shields.io/github/issues/canstralian/btc-dca-intel)
+![Stars](https://img.shields.io/github/stars/canstralian/btc-dca-intel)
 
-### **Project Overview**
-- **Name:** `btc-dca-trading-system` (DCAlytics)
-- **Purpose:** A cryptocurrency dashboard and simulation tool for dynamic dollar-cost averaging (DCA) combined with risk-managed hedging strategies.
-- **Features:**
-  - Portfolio visualization.
-  - Simulation of BTC trades.
-  - Comparison of DCA vs. HODL strategies.
-  - Backtesting with historical and live BTC data.
-  - Secure API endpoints with validation and authentication.
-  - Responsive UI (React or Streamlit).
-
+## 🚀 Overview
+BTC DCA Intel is an intelligence platform for tracking and optimizing Bitcoin Dollar-Cost Averaging strategies.  
+Stack: **TypeScript + Vite + Tailwind + Drizzle ORM + Python ML Service**.  
 ---
 
 ### **Stack Details**
