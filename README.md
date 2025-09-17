@@ -7,8 +7,36 @@
 
 ## 🚀 Overview
 BTC DCA Intel is an intelligence platform for tracking and optimizing Bitcoin Dollar-Cost Averaging strategies.  
-Stack: **TypeScript + Vite + Tailwind + Drizzle ORM + Python ML Service**.  
----
+Stack: **TypeScript + Vite + Tailwind + Drizzle ORM + Python ML Service**.
+
+## ✨ UI/UX Features
+
+### 🎨 Modern Design System
+- **Responsive Design**: Optimized for mobile, tablet, and desktop with custom breakpoints
+- **Dark/Light Themes**: Automatic system preference detection with smooth transitions
+- **Accessibility**: WCAG 2.1 AA compliant with screen reader support and keyboard navigation
+- **Typography**: Optimized font loading with Inter and JetBrains Mono for better readability
+
+### 🛡️ Accessibility Features
+- **Screen Reader Support**: Comprehensive ARIA labeling and semantic HTML
+- **Keyboard Navigation**: Full keyboard accessibility with proper focus management
+- **High Contrast Mode**: Support for users with visual impairments
+- **Reduced Motion**: Respects user's motion preferences
+- **Skip Navigation**: Quick access to main content for assistive technologies
+
+### 📱 Responsive Design
+- **Mobile-First**: Touch-friendly interface with proper target sizes
+- **Flexible Layouts**: CSS Grid and Flexbox for optimal content arrangement
+- **Performance**: Optimized loading states and skeleton screens
+- **Cross-Browser**: Tested across modern browsers with fallbacks
+
+### 🎯 Enhanced User Experience
+- **Loading States**: Skeleton screens and progressive loading
+- **Smooth Animations**: Subtle transitions that enhance usability
+- **Error Handling**: User-friendly error messages and recovery options
+- **Theme Persistence**: Remembers user preferences across sessions
+
+For detailed documentation on UI/UX enhancements, see [docs/ui-ux-enhancements.md](./docs/ui-ux-enhancements.md).
 
 ### **Stack Details**
 - **Backend:** Python (FastAPI or Flask).
