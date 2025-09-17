@@ -38,17 +38,6 @@ Built with a responsive frontend and a Python backend, the stack is friendly to 
 
 Add this once near the top of your README (or to a docs page) to present interactive GitHub buttons:
 
-```html
-<!-- Load GitHub Buttons script -->
-<script async defer src="https://buttons.github.io/buttons.js"></script>
-
-<!-- GitHub Buttons: use your repo URL -->
-<a class="github-button" href="https://github.com/canstralian/btc-dca-trading-system" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star canstralian/btc-dca-trading-system on GitHub">Star</a>
-<a class="github-button" href="https://github.com/canstralian/btc-dca-trading-system/fork" data-icon="octicon-repo-forked" data-size="large" data-show-count="true" aria-label="Fork canstralian/btc-dca-trading-system on GitHub">Fork</a>
-<a class="github-button" href="https://github.com/canstralian/btc-dca-trading-system/issues" data-icon="octicon-issue-opened" data-size="large" aria-label="Issue canstralian/btc-dca-trading-system on GitHub">Issue</a>
-<a class="github-button" href="https://github.com/sponsors/canstralian" data-icon="octicon-heart" data-size="large" aria-label="Sponsor canstralian on GitHub">Sponsor</a>
-```
-
 These make it trivial for visitors to star, fork, open issues, or sponsor.
 
 ---
