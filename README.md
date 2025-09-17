@@ -1,406 +1,268 @@
-# btc-dca-trading-system
+btc-dca-trading-system (DCAlytics)
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![Open Issues](https://img.shields.io/github/issues/canstralian/btc-dca-trading-system)](https://github.com/canstralian/btc-dca-trading-system/issues)
+https://img.shields.io/badge/license-Apache%202.0-blue.svg https://img.shields.io/badge/python-3.11%2B-blue https://img.shields.io/github/issues/canstralian/btc-dca-trading-system https://img.shields.io/github/stars/canstralian/btc-dca-trading-system?style=social https://img.shields.io/github/forks/canstralian/btc-dca-trading-system?style=social
 
-## Smart, hedged BTC investing made simple.
+Smart, hedged BTC investing made simple.
 
 ---
 
 Table of Contents
-1. [Introduction](#introduction)
-2. [Quick Actions (Working Buttons)](#quick-actions-working-buttons)
-3. [Features](#features)
-4. [Installation](#installation)
-5. [Working Button: Frontend & Backend Examples](#working-button-frontend--backend-examples)
-6. [Collaboration & Contribution Enhancements](#collaboration--contribution-enhancements)
-7. [Project Structure](#project-structure)
-8. [Configuration](#configuration)
-9. [Contributing](#contributing)
-10. [License](#license)
+
+1. Introduction
+2. Quick Actions
+3. Features
+4. Installation
+5. API Examples
+6. Collaboration
+7. Project Structure
+8. Configuration
+9. Contributing
+10. License
 
 ---
 
-## Introduction
+Introduction
 
 DCAlytics is an interactive cryptocurrency dashboard and simulation tool combining dynamic dollar-cost averaging (DCA) with risk-managed hedging strategies. The platform allows users to:
 
-- Visualize portfolio performance
-- Simulate BTC trades
-- Optimize investments while managing market volatility
+· Visualize portfolio performance
+· Simulate BTC trades
+· Optimize investments while managing market volatility
 
 Built with a responsive frontend and a Python backend, the stack is friendly to React + Flask/FastAPI and PostgreSQL for durable state.
 
 ---
 
-## Quick Actions (Working Buttons)
+Quick Actions
 
-Add this once near the top of your README (or to a docs page) to present interactive GitHub buttons:
+Quick links for repository interaction:
 
-These make it trivial for visitors to star, fork, open issues, or sponsor.
-
----
-
-## Features
-
-- Dynamic DCA engine with configurable intervals
-- Hedging strategy support (adjustable hedge percentage)
-- Portfolio analytics and comparisons (DCA vs HODL)
-- Backtest engine using historical and live BTC data
-- Responsive UI (TailwindCSS + Chart.js or React + Chart.js)
-- Example endpoints for secure simulation runs and integration
+https://img.shields.io/badge/-Open%20Issue-blue?logo=github https://img.shields.io/badge/-Fork%20Repo-lightgrey?logo=github https://img.shields.io/badge/-Star%20Repo-yellow?logo=github
 
 ---
 
-## Installation
+Features
 
-### Prerequisites
+· Dynamic DCA engine with configurable intervals
+· Hedging strategy support (adjustable hedge percentage)
+· Portfolio analytics and comparisons (DCA vs HODL)
+· Backtest engine using historical and live BTC data
+· Responsive UI (TailwindCSS + Chart.js or React + Chart.js)
+· Secure API endpoints with validation and authentication
 
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL (optional but recommended for production; SQLite for quick local runs)
-- Git
+---
 
-### Clone the Repository
+Installation
+
+Prerequisites
+
+· Python 3.11+
+· Node.js 18+ (for React frontend)
+· PostgreSQL (recommended for production)
+· Git
+
+Clone & Setup
 
 ```bash
 git clone https://github.com/canstralian/btc-dca-trading-system.git
 cd btc-dca-trading-system
 ```
 
-### Backend (example using virtualenv)
+Backend Setup
 
 ```bash
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Linux / macOS
-venv\Scripts\activate     # Windows
+source venv/bin/activate  # Linux/macOS
+# venv\Scripts\activate  # Windows
 
+# Install dependencies
 pip install -r backend/requirements.txt
+
+# Run FastAPI server
 uvicorn backend.main:app --reload --port 8000
 ```
 
-(If you prefer Flask see the "Backend: Flask example" section below.)
+Frontend Setup
 
-### Frontend
+Choose one of the following frontend options:
 
-- Static: open `frontend/index.html`
-- React: `cd frontend && npm install && npm start`
-- Streamlit: `pip install streamlit && streamlit run frontend/app.py`
+Static HTML:
+
+```bash
+open frontend/index.html  # Or manually open in browser
+```
+
+React App:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Streamlit App:
+
+```bash
+pip install streamlit
+streamlit run frontend/app.py
+```
 
 ---
 
-## Working Button: Frontend & Backend Examples
+API Examples
 
-Below are secure, working examples you can paste into the repo to wire a "Run Simulation" button to a backend endpoint. These examples include input validation, API-key checks, and notes on production hardening (rate limiting, job queueing, HTTPS).
+FastAPI Backend (Recommended)
 
-A. Static HTML + JavaScript (frontend/scripts.js or index.html)
-```html
-<!-- Minimal accessible Run Simulation button + fetch to /api/simulate -->
-<button id="runSimBtn" aria-label="Run simulation">Run Simulation</button>
-<div id="simResult" aria-live="polite"></div>
+```python
+from fastapi import FastAPI, HTTPException, Header
+from pydantic import BaseModel
+import os
 
-<script>
-/*
-  Minimal client-side runner for demo purposes.
-  - Disables button while request is in-flight.
-  - Displays structured messages.
-  - Do not rely on client-side validation alone.
-*/
-const runBtn = document.getElementById('runSimBtn');
-const resultNode = document.getElementById('simResult');
+app = FastAPI()
 
-runBtn.addEventListener('click', async () => {
-  runBtn.disabled = true;
-  runBtn.textContent = 'Running...';
-  resultNode.textContent = '';
+class SimulationRequest(BaseModel):
+    investment_amount: float
+    frequency: str
+    hedge_pct: int
+    period_months: int
 
-  const payload = {
-    investment_amount: 50,
-    frequency: 'weekly',
-    hedge_pct: 20,
-    period_months: 12
-  };
-
-  try {
-    const res = await fetch('/api/simulate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Use a rotated API key in production (e.g., via env + secrets manager)
-        'x-api-key': 'REPLACE_WITH_SECURE_KEY'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || res.statusText);
-    }
-
-    const data = await res.json();
-    resultNode.textContent = `Simulation complete — final_value: ${data.final_value}`;
-  } catch (err) {
-    resultNode.textContent = `Error: ${err.message}`;
-  } finally {
-    runBtn.disabled = false;
-    runBtn.textContent = 'Run Simulation';
-  }
-});
-</script>
+@app.post("/api/simulate")
+async def simulate(
+    request: SimulationRequest,
+    x_api_key: str = Header(...)
+):
+    if x_api_key != os.getenv("API_KEY"):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    # Your simulation logic here
+    return {"status": "success", "data": request.dict()}
 ```
 
-B. React (frontend/src/components/RunSimulation.jsx)
+React Frontend Component
+
 ```jsx
 import React, { useState } from 'react';
 
-/**
- * RunSimulation - React component that triggers a simulation run.
- * - Uses fetch() to call the backend.
- * - Displays success/error messages and disables while running.
- */
-export default function RunSimulation() {
-  const [running, setRunning] = useState(false);
-  const [message, setMessage] = useState('');
+const SimulationButton = () => {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
 
-  async function handleRun() {
-    setMessage('');
-    setRunning(true);
-
-    const payload = {
-      investment_amount: 50,
-      frequency: 'weekly',
-      hedge_pct: 20,
-      period_months: 12
-    };
-
+  const runSimulation = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/simulate', {
+      const response = await fetch('/api/simulate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // For production, obtain API keys via a secure endpoint or user auth
-          'x-api-key': process.env.REACT_APP_API_KEY // Example for Create React App
+          'x-api-key': process.env.REACT_APP_API_KEY
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          investment_amount: 100,
+          frequency: 'monthly',
+          hedge_pct: 20,
+          period_months: 12
+        })
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || 'Request failed');
-      }
-
-      const data = await res.json();
-      setMessage(`Success — final value: ${data.final_value}`);
-    } catch (e) {
-      setMessage(`Error: ${e.message}`);
+      
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      console.error('Error:', error);
     } finally {
-      setRunning(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div>
-      <button onClick={handleRun} disabled={running}>
-        {running ? 'Running...' : 'Run Simulation'}
+      <button onClick={runSimulation} disabled={loading}>
+        {loading ? 'Running...' : 'Run Simulation'}
       </button>
-      {message && <div role="status">{message}</div>}
+      {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
     </div>
   );
-}
+};
 ```
-
-C. FastAPI backend (backend/main.py) — secure and Pydantic-validated
-```python
-from fastapi import FastAPI, Header, HTTPException, Request, status
-from pydantic import BaseModel, Field, conint, confloat
-from typing import Optional
-
-app = FastAPI(title="DCAlytics API")
-
-
-class SimPayload(BaseModel):
-    investment_amount: confloat(gt=0) = Field(..., description="USD per DCA purchase")
-    frequency: str = Field(..., description="dca frequency: daily|weekly|monthly")
-    hedge_pct: conint(ge=0, le=100) = Field(..., description="Hedge percentage (0-100)")
-    period_months: conint(gt=0, le=120) = Field(..., description="Period in months")
-
-
-@app.post("/api/simulate")
-async def simulate(payload: SimPayload, x_api_key: Optional[str] = Header(None)):
-    """
-    Run a lightweight simulation and return summary results.
-    Security:
-      - Simple API key required (replace with OAuth2/JWT for production).
-      - Keep handler short; for long simulations push to a background queue (Celery/RQ).
-    """
-    if x_api_key != os.getenv("API_KEY"):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-
-    # Toy simulation - replace with the real trading_engine logic
-    multiplier = 1.1 - (payload.hedge_pct / 100) * 0.01
-    final_value = payload.investment_amount * payload.period_months * multiplier
-
-    return {"final_value": round(final_value, 2), "period_months": payload.period_months}
-```
-
-D. Flask alternative (backend/flask_app.py) — for teams preferring Flask
-```python
-"""
-Flask endpoint equivalent. Use with gunicorn + uvloop for production.
-This example uses pydantic for request validation.
-"""
-from flask import Flask, request, jsonify
-from pydantic import BaseModel, ValidationError, conint, confloat
-
-app = Flask(__name__)
-
-
-class SimPayload(BaseModel):
-    investment_amount: confloat(gt=0)
-    frequency: str
-    hedge_pct: conint(ge=0, le=100)
-    period_months: conint(gt=1, le=120)
-
-
-@app.route("/api/simulate", methods=["POST"])
-def simulate():
-    api_key = request.headers.get("x-api-key")
-    if api_key != "REPLACE_WITH_SECURE_KEY":
-        return jsonify({"detail": "Invalid API key"}), 401
-
-    try:
-        payload = SimPayload(**request.get_json())
-    except ValidationError as exc:
-        return jsonify({"detail": exc.errors()}), 422
-
-    multiplier = 1.1 - (payload.hedge_pct / 100) * 0.01
-    final_value = payload.investment_amount * payload.period_months * multiplier
-    return jsonify({"final_value": round(final_value, 2), "period_months": payload.period_months})
-```
-
-Notes and production hardening:
-- Use HTTPS only.
-- Replace static API key with OAuth2/JWT or session-based auth.
-- Add rate limiting (Redis + limiter middleware) and request logging.
-- For long simulations use background processing (Celery/RQ + Redis) and return a job ID.
-- Sanitize inputs and limit maximum work per request (protect CPU/time).
 
 ---
 
-## Collaboration & Contribution Enhancements
+Collaboration
 
-To attract contributors and streamline triage, add these repository files (I can create them for you if you want):
+We welcome contributions! Please see our Contributing Guidelines for details.
 
-- CONTRIBUTING.md — contribution workflow, local dev steps, testing, commit message guidance.
-- CODE_OF_CONDUCT.md — Contributor Covenant (short version + contact).
-- .github/ISSUE_TEMPLATE/bug_report.md — structured bug report.
-- .github/ISSUE_TEMPLATE/feature_request.md — fielded feature request.
-- .github/PULL_REQUEST_TEMPLATE.md — PR checklist (tests, changelog, "assign me" option).
-- .github/workflows/ci.yml — CI to run unit tests and linters on PRs (example below).
-- LABELS.md — recommended label set and descriptions.
-- CONTRIBUTORS.md — add contributors (and instructions on how to add yourself).
+Good First Issues
 
-Example CI (GitHub Actions) snippet: .github/workflows/ci.yml
-```yaml
-name: CI
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install backend deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-      - name: Run linters
-        run: |
-          pip install flake8
-          flake8 backend
-      - name: Run tests
-        run: |
-          pip install pytest
-          pytest -q
-```
+· Add unit tests for trading engine
+· Implement API key rotation utility
+· Enhance Streamlit dashboard
+· Improve documentation
 
-Good-first-issue ideas (add as issues to the repo to attract contributors):
-- "Add unit tests for trading_engine buy/sell calculations" — label: good first issue
-- "Implement API key rotation utility and docs" — label: help wanted
-- "Add Streamlit demo page with example simulation" — label: enhancement
-- "Add CONTRIBUTING.md and CODE_OF_CONDUCT.md" — label: docs
+Development Setup
 
-Encouraging collaboration:
-- Pin a few "good first issue" tasks.
-- Add a CONTRIBUTOR WELCOME blurb in README with steps to get started.
-- Offer a "mentor available" checkbox in PR template for maintainers to volunteer.
+1. Fork the repository
+2. Create a feature branch: git checkout -b feature/amazing-feature
+3. Commit changes: git commit -m 'Add amazing feature'
+4. Push to branch: git push origin feature/amazing-feature
+5. Open a Pull Request
 
 ---
 
-## Project Structure
+Project Structure
 
 ```
 btc-dca-trading-system/
-├── backend/                 # FastAPI or Flask backend
-│   ├── main.py              # API routes (FastAPI example)
-│   ├── flask_app.py         # Flask alternative
-│   ├── trading_engine.py    # Algorithmic trading logic
-│   ├── models.py            # Pydantic / DB models
+├── backend/
+│   ├── main.py              # FastAPI application
+│   ├── trading_engine.py    # Core trading logic
+│   ├── models.py            # Data models
 │   └── requirements.txt
-├── frontend/                # Dashboard UI (static/React/Streamlit)
-│   ├── index.html
-│   ├── src/                 # React app
-│   └── app.py               # Streamlit app
-├── data/                    # Sample datasets / cached BTC prices
-├── docs/                    # Documentation and diagrams
-├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows/
-└── README.md
+├── frontend/
+│   ├── public/              # Static files
+│   ├── src/                 # React components
+│   ├── app.py               # Streamlit app
+│   └── package.json
+├── data/                    # Sample data
+├── docs/                    # Documentation
+└── tests/                   # Test cases
 ```
 
 ---
 
-## Configuration
+Configuration
 
-- Use environment variables or a secrets manager (HashiCorp Vault, AWS Secrets Manager) for API keys and DB credentials.
-- Example .env (not to be committed):
+1. Copy .env.example to .env
+2. Update environment variables:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/dcalytics
+API_KEY=your-secure-api-key-here
+BTC_API_URL=https://api.coingecko.com/api/v3
 ```
-DATABASE_URL=postgres://user:pass@localhost:5432/dcalytics
-API_KEY=your_securely_generated_api_key_here
-```
-- Recommend PostgreSQL for production, use SQLAlchemy (or async SQLModel) and connection pooling.
 
-Security best practices (short list):
-- Do not commit secrets.
-- Use parameterized queries with SQLAlchemy/psycopg2.
-- Apply rate-limiting and authentication for endpoints.
-- Use HTTPS and HSTS on production.
+Security Recommendations:
+
+· Use environment variables for all secrets
+· Enable HTTPS in production
+· Implement rate limiting
+· Regularly rotate API keys
 
 ---
 
-## Contributing
+Contributing
 
-We welcome contributions. Quickstart:
-
-1. Fork the repo.
-2. Create branch: feature/<short-desc> or fix/<short-desc>.
-3. Run tests and linters locally (see CONTRIBUTING.md).
-4. Open a PR with a clear description and link to any issues.
-
-Suggested templates and labels are mentioned above. If you're new, comment "I want to help" on a `good first issue` and a maintainer will guide you.
+1. Read our Code of Conduct
+2. Follow GitHub Flow
+3. Write tests for new features
+4. Update documentation accordingly
+5. Ensure all tests pass before submitting PR
 
 ---
 
-## License
+License
 
-Apache 2.0 — see LICENSE for details.
+This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
 
 ---
+
+Note: This is a simulation tool only. Not financial advice. Cryptocurrency investments carry significant risk.
