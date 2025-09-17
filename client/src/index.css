@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 :root {
-  /* Light theme variables */
+  /* Light theme variables - Enhanced for better contrast and accessibility */
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(210, 40%, 8%);
   --card: hsl(0, 0%, 100%);
@@ -29,6 +29,8 @@
   --chart-3: hsl(0, 84%, 60%);
   --chart-4: hsl(210, 40%, 65%);
   --chart-5: hsl(280, 65%, 60%);
+  
+  /* Sidebar variables */
   --sidebar: hsl(0, 0%, 98%);
   --sidebar-foreground: hsl(210, 40%, 15%);
   --sidebar-primary: hsl(30, 95%, 55%);
@@ -37,24 +39,40 @@
   --sidebar-accent-foreground: hsl(30, 95%, 55%);
   --sidebar-border: hsl(210, 40%, 90%);
   --sidebar-ring: hsl(30, 95%, 55%);
+  
+  /* Enhanced theme variables for secondary and tertiary actions */
+  --tertiary: hsl(210, 40%, 88%);
+  --tertiary-foreground: hsl(210, 40%, 20%);
+  --success: hsl(155, 69%, 37%);
+  --success-foreground: hsl(210, 40%, 98%);
+  --warning: hsl(45, 95%, 55%);
+  --warning-foreground: hsl(210, 40%, 8%);
+  --info: hsl(210, 95%, 55%);
+  --info-foreground: hsl(210, 40%, 98%);
+  
+  /* Typography and spacing variables */
   --font-sans: Inter, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.5rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(30 95% 55% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(30 95% 55% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(30 95% 55% / 0.00), 0px 1px 2px -1px hsl(30 95% 55% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(30 95% 55% / 0.00), 0px 1px 2px -1px hsl(30 95% 55% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(30 95% 55% / 0.00), 0px 2px 4px -1px hsl(30 95% 55% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(30 95% 55% / 0.00), 0px 4px 6px -1px hsl(30 95% 55% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(30 95% 55% / 0.00), 0px 8px 10px -1px hsl(30 95% 55% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(30 95% 55% / 0.00);
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+  
+  /* Enhanced shadow variables with better contrast */
+  --shadow-2xs: 0px 1px 2px 0px hsl(210 40% 8% / 0.05);
+  --shadow-xs: 0px 1px 2px 0px hsl(210 40% 8% / 0.05), 0px 1px 3px 0px hsl(210 40% 8% / 0.1);
+  --shadow-sm: 0px 1px 2px 0px hsl(210 40% 8% / 0.05), 0px 1px 3px 0px hsl(210 40% 8% / 0.1);
+  --shadow: 0px 1px 3px 0px hsl(210 40% 8% / 0.1), 0px 1px 2px 0px hsl(210 40% 8% / 0.06);
+  --shadow-md: 0px 4px 6px -1px hsl(210 40% 8% / 0.1), 0px 2px 4px -1px hsl(210 40% 8% / 0.06);
+  --shadow-lg: 0px 10px 15px -3px hsl(210 40% 8% / 0.1), 0px 4px 6px -2px hsl(210 40% 8% / 0.05);
+  --shadow-xl: 0px 20px 25px -5px hsl(210 40% 8% / 0.1), 0px 10px 10px -5px hsl(210 40% 8% / 0.04);
+  --shadow-2xl: 0px 25px 50px -12px hsl(210 40% 8% / 0.25);
 }
 
 .dark {
-  /* Dark theme variables */
+  /* Dark theme variables - Enhanced for better contrast and accessibility */
   --background: hsl(210, 40%, 8%);
   --foreground: hsl(210, 40%, 98%);
   --card: hsl(210, 40%, 12%);
@@ -74,6 +92,8 @@
   --border: hsl(210, 40%, 20%);
   --input: hsl(210, 40%, 15%);
   --ring: hsl(30, 95%, 55%);
+  
+  /* Enhanced dark theme sidebar variables */
   --sidebar: hsl(210, 40%, 12%);
   --sidebar-foreground: hsl(210, 40%, 98%);
   --sidebar-primary: hsl(30, 95%, 55%);
@@ -82,6 +102,26 @@
   --sidebar-accent-foreground: hsl(30, 95%, 55%);
   --sidebar-border: hsl(210, 40%, 20%);
   --sidebar-ring: hsl(30, 95%, 55%);
+  
+  /* Enhanced theme variables for secondary and tertiary actions - Dark mode */
+  --tertiary: hsl(210, 40%, 22%);
+  --tertiary-foreground: hsl(210, 40%, 85%);
+  --success: hsl(155, 69%, 45%);
+  --success-foreground: hsl(210, 40%, 98%);
+  --warning: hsl(45, 95%, 65%);
+  --warning-foreground: hsl(210, 40%, 8%);
+  --info: hsl(210, 95%, 65%);
+  --info-foreground: hsl(210, 40%, 98%);
+  
+  /* Enhanced shadow variables for dark theme */
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.1);
+  --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.1), 0px 1px 3px 0px hsl(0 0% 0% / 0.2);
+  --shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.1), 0px 1px 3px 0px hsl(0 0% 0% / 0.2);
+  --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px 0px hsl(0 0% 0% / 0.12);
+  --shadow-md: 0px 4px 6px -1px hsl(0 0% 0% / 0.2), 0px 2px 4px -1px hsl(0 0% 0% / 0.12);
+  --shadow-lg: 0px 10px 15px -3px hsl(0 0% 0% / 0.2), 0px 4px 6px -2px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0px 20px 25px -5px hsl(0 0% 0% / 0.2), 0px 10px 10px -5px hsl(0 0% 0% / 0.08);
+  --shadow-2xl: 0px 25px 50px -12px hsl(0 0% 0% / 0.35);
 }
 
 @layer base {
@@ -95,10 +135,12 @@
 }
 
 @layer utilities {
+  /* Typography utilities */
   .mono {
     font-family: var(--font-mono);
   }
 
+  /* Financial price styling utilities */
   .price-up {
     color: var(--accent);
   }
@@ -107,7 +149,321 @@
     color: var(--destructive);
   }
 
+  /* Glow effects */
   .glow-primary {
     box-shadow: 0 0 20px hsl(30 95% 55% / 0.3);
+  }
+
+  .glow-success {
+    box-shadow: 0 0 20px hsl(155 69% 37% / 0.3);
+  }
+
+  .glow-destructive {
+    box-shadow: 0 0 20px hsl(0 84% 60% / 0.3);
+  }
+
+  /* Typography classes for headers and text emphasis */
+  .text-h1 {
+    @apply text-4xl font-bold tracking-tight;
+    line-height: 1.1;
+  }
+
+  .text-h2 {
+    @apply text-3xl font-semibold tracking-tight;
+    line-height: 1.2;
+  }
+
+  .text-h3 {
+    @apply text-2xl font-semibold tracking-tight;
+    line-height: 1.3;
+  }
+
+  .text-h4 {
+    @apply text-xl font-semibold tracking-tight;
+    line-height: 1.4;
+  }
+
+  .text-subheader {
+    @apply text-lg font-medium text-muted-foreground;
+    line-height: 1.5;
+  }
+
+  .text-emphasis {
+    @apply font-semibold text-foreground;
+  }
+
+  .text-subtle {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .text-caption {
+    @apply text-xs text-muted-foreground;
+  }
+
+  /* Layout and flexbox utilities */
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  .flex-start {
+    @apply flex items-center justify-start;
+  }
+
+  .flex-end {
+    @apply flex items-center justify-end;
+  }
+
+  .flex-col-center {
+    @apply flex flex-col items-center justify-center;
+  }
+
+  .flex-col-start {
+    @apply flex flex-col items-start justify-start;
+  }
+
+  /* Border radius utilities */
+  .rounded-lg {
+    border-radius: var(--radius-lg);
+  }
+
+  .rounded-xl {
+    border-radius: var(--radius-xl);
+  }
+
+  /* Mobile-first responsive spacing utilities */
+  /* Base spacing for mobile */
+  .space-xs { gap: 0.5rem; }
+  .space-sm { gap: 0.75rem; }
+  .space-md { gap: 1rem; }
+  .space-lg { gap: 1.5rem; }
+  .space-xl { gap: 2rem; }
+  
+  /* Padding utilities - Mobile first */
+  .p-xs { padding: 0.5rem; }
+  .p-sm { padding: 0.75rem; }
+  .p-md { padding: 1rem; }
+  .p-lg { padding: 1.5rem; }
+  .p-xl { padding: 2rem; }
+  
+  /* Margin utilities - Mobile first */
+  .m-xs { margin: 0.5rem; }
+  .m-sm { margin: 0.75rem; }
+  .m-md { margin: 1rem; }
+  .m-lg { margin: 1.5rem; }
+  .m-xl { margin: 2rem; }
+
+  /* Visibility utilities - Mobile first */
+  .hidden-xs {
+    display: none;
+  }
+
+  /* Shadow utilities */
+  .shadow-custom-sm {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-custom-md {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-custom-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .shadow-custom-xl {
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Responsive breakpoints - Mobile first approach */
+  /* Small screens (640px and up) - Tablets */
+  @media (min-width: 640px) {
+    .hidden-xs { display: block; }
+    .hidden-sm { display: none; }
+    
+    .sm\:space-xs { gap: 0.5rem; }
+    .sm\:space-sm { gap: 0.75rem; }
+    .sm\:space-md { gap: 1rem; }
+    .sm\:space-lg { gap: 1.5rem; }
+    .sm\:space-xl { gap: 2rem; }
+    .sm\:space-2xl { gap: 2.5rem; }
+    
+    .sm\:p-xs { padding: 0.5rem; }
+    .sm\:p-sm { padding: 0.75rem; }
+    .sm\:p-md { padding: 1rem; }
+    .sm\:p-lg { padding: 1.5rem; }
+    .sm\:p-xl { padding: 2rem; }
+    .sm\:p-2xl { padding: 2.5rem; }
+    
+    .sm\:m-xs { margin: 0.5rem; }
+    .sm\:m-sm { margin: 0.75rem; }
+    .sm\:m-md { margin: 1rem; }
+    .sm\:m-lg { margin: 1.5rem; }
+    .sm\:m-xl { margin: 2rem; }
+    .sm\:m-2xl { margin: 2.5rem; }
+    
+    .sm\:text-h1 {
+      @apply text-5xl;
+    }
+    
+    .sm\:text-h2 {
+      @apply text-4xl;
+    }
+    
+    .sm\:flex-row {
+      @apply flex-row;
+    }
+    
+    .sm\:flex-col {
+      @apply flex-col;
+    }
+  }
+
+  /* Medium screens (768px and up) - Small desktops */
+  @media (min-width: 768px) {
+    .hidden-sm { display: block; }
+    .hidden-md { display: none; }
+    
+    .md\:space-xs { gap: 0.5rem; }
+    .md\:space-sm { gap: 0.75rem; }
+    .md\:space-md { gap: 1rem; }
+    .md\:space-lg { gap: 1.5rem; }
+    .md\:space-xl { gap: 2rem; }
+    .md\:space-2xl { gap: 2.5rem; }
+    .md\:space-3xl { gap: 3rem; }
+    
+    .md\:p-xs { padding: 0.5rem; }
+    .md\:p-sm { padding: 0.75rem; }
+    .md\:p-md { padding: 1rem; }
+    .md\:p-lg { padding: 1.5rem; }
+    .md\:p-xl { padding: 2rem; }
+    .md\:p-2xl { padding: 2.5rem; }
+    .md\:p-3xl { padding: 3rem; }
+    
+    .md\:m-xs { margin: 0.5rem; }
+    .md\:m-sm { margin: 0.75rem; }
+    .md\:m-md { margin: 1rem; }
+    .md\:m-lg { margin: 1.5rem; }
+    .md\:m-xl { margin: 2rem; }
+    .md\:m-2xl { margin: 2.5rem; }
+    .md\:m-3xl { margin: 3rem; }
+    
+    .md\:text-h1 {
+      @apply text-6xl;
+    }
+    
+    .md\:text-h2 {
+      @apply text-5xl;
+    }
+  }
+
+  /* Large screens (1024px and up) - Desktops */
+  @media (min-width: 1024px) {
+    .hidden-md { display: block; }
+    .hidden-lg { display: none; }
+    
+    .lg\:space-xs { gap: 0.5rem; }
+    .lg\:space-sm { gap: 0.75rem; }
+    .lg\:space-md { gap: 1rem; }
+    .lg\:space-lg { gap: 1.5rem; }
+    .lg\:space-xl { gap: 2rem; }
+    .lg\:space-2xl { gap: 2.5rem; }
+    .lg\:space-3xl { gap: 3rem; }
+    .lg\:space-4xl { gap: 4rem; }
+    
+    .lg\:p-xs { padding: 0.5rem; }
+    .lg\:p-sm { padding: 0.75rem; }
+    .lg\:p-md { padding: 1rem; }
+    .lg\:p-lg { padding: 1.5rem; }
+    .lg\:p-xl { padding: 2rem; }
+    .lg\:p-2xl { padding: 2.5rem; }
+    .lg\:p-3xl { padding: 3rem; }
+    .lg\:p-4xl { padding: 4rem; }
+    
+    .lg\:m-xs { margin: 0.5rem; }
+    .lg\:m-sm { margin: 0.75rem; }
+    .lg\:m-md { margin: 1rem; }
+    .lg\:m-lg { margin: 1.5rem; }
+    .lg\:m-xl { margin: 2rem; }
+    .lg\:m-2xl { margin: 2.5rem; }
+    .lg\:m-3xl { margin: 3rem; }
+    .lg\:m-4xl { margin: 4rem; }
+  }
+
+  /* Extra large screens (1280px and up) - Large desktops */
+  @media (min-width: 1280px) {
+    .hidden-lg { display: block; }
+    .hidden-xl { display: none; }
+    
+    .xl\:space-xs { gap: 0.5rem; }
+    .xl\:space-sm { gap: 0.75rem; }
+    .xl\:space-md { gap: 1rem; }
+    .xl\:space-lg { gap: 1.5rem; }
+    .xl\:space-xl { gap: 2rem; }
+    .xl\:space-2xl { gap: 2.5rem; }
+    .xl\:space-3xl { gap: 3rem; }
+    .xl\:space-4xl { gap: 4rem; }
+    .xl\:space-5xl { gap: 5rem; }
+    
+    .xl\:p-xs { padding: 0.5rem; }
+    .xl\:p-sm { padding: 0.75rem; }
+    .xl\:p-md { padding: 1rem; }
+    .xl\:p-lg { padding: 1.5rem; }
+    .xl\:p-xl { padding: 2rem; }
+    .xl\:p-2xl { padding: 2.5rem; }
+    .xl\:p-3xl { padding: 3rem; }
+    .xl\:p-4xl { padding: 4rem; }
+    .xl\:p-5xl { padding: 5rem; }
+    
+    .xl\:m-xs { margin: 0.5rem; }
+    .xl\:m-sm { margin: 0.75rem; }
+    .xl\:m-md { margin: 1rem; }
+    .xl\:m-lg { margin: 1.5rem; }
+    .xl\:m-xl { margin: 2rem; }
+    .xl\:m-2xl { margin: 2.5rem; }
+    .xl\:m-3xl { margin: 3rem; }
+    .xl\:m-4xl { margin: 4rem; }
+    .xl\:m-5xl { margin: 5rem; }
+  }
+
+  /* 2XL screens (1536px and up) - Very large desktops */
+  @media (min-width: 1536px) {
+    .hidden-xl { display: block; }
+    
+    .\32xl\:space-xs { gap: 0.5rem; }
+    .\32xl\:space-sm { gap: 0.75rem; }
+    .\32xl\:space-md { gap: 1rem; }
+    .\32xl\:space-lg { gap: 1.5rem; }
+    .\32xl\:space-xl { gap: 2rem; }
+    .\32xl\:space-2xl { gap: 2.5rem; }
+    .\32xl\:space-3xl { gap: 3rem; }
+    .\32xl\:space-4xl { gap: 4rem; }
+    .\32xl\:space-5xl { gap: 5rem; }
+    .\32xl\:space-6xl { gap: 6rem; }
+    
+    .\32xl\:p-xs { padding: 0.5rem; }
+    .\32xl\:p-sm { padding: 0.75rem; }
+    .\32xl\:p-md { padding: 1rem; }
+    .\32xl\:p-lg { padding: 1.5rem; }
+    .\32xl\:p-xl { padding: 2rem; }
+    .\32xl\:p-2xl { padding: 2.5rem; }
+    .\32xl\:p-3xl { padding: 3rem; }
+    .\32xl\:p-4xl { padding: 4rem; }
+    .\32xl\:p-5xl { padding: 5rem; }
+    .\32xl\:p-6xl { padding: 6rem; }
+    
+    .\32xl\:m-xs { margin: 0.5rem; }
+    .\32xl\:m-sm { margin: 0.75rem; }
+    .\32xl\:m-md { margin: 1rem; }
+    .\32xl\:m-lg { margin: 1.5rem; }
+    .\32xl\:m-xl { margin: 2rem; }
+    .\32xl\:m-2xl { margin: 2.5rem; }
+    .\32xl\:m-3xl { margin: 3rem; }
+    .\32xl\:m-4xl { margin: 4rem; }
+    .\32xl\:m-5xl { margin: 5rem; }
+    .\32xl\:m-6xl { margin: 6rem; }
   }
 }

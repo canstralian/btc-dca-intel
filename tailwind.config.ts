@@ -9,6 +9,7 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "var(--radius-xl)",
       },
       colors: {
         background: "var(--background)",
@@ -29,6 +30,10 @@ export default {
           DEFAULT: "var(--secondary)",
           foreground: "var(--secondary-foreground)",
         },
+        tertiary: {
+          DEFAULT: "var(--tertiary)",
+          foreground: "var(--tertiary-foreground)",
+        },
         muted: {
           DEFAULT: "var(--muted)",
           foreground: "var(--muted-foreground)",
@@ -41,6 +46,18 @@ export default {
           DEFAULT: "var(--destructive)",
           foreground: "var(--destructive-foreground)",
         },
+        success: {
+          DEFAULT: "var(--success)",
+          foreground: "var(--success-foreground)",
+        },
+        warning: {
+          DEFAULT: "var(--warning)",
+          foreground: "var(--warning-foreground)",
+        },
+        info: {
+          DEFAULT: "var(--info)",
+          foreground: "var(--info-foreground)",
+        },
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",
@@ -52,7 +69,7 @@ export default {
           "5": "var(--chart-5)",
         },
         sidebar: {
-          DEFAULT: "var(--sidebar-background)",
+          DEFAULT: "var(--sidebar)",
           foreground: "var(--sidebar-foreground)",
           primary: "var(--sidebar-primary)",
           "primary-foreground": "var(--sidebar-primary-foreground)",
@@ -66,6 +83,26 @@ export default {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+      },
+      spacing: {
+        "xs": "0.5rem",
+        "sm": "0.75rem", 
+        "md": "1rem",
+        "lg": "1.5rem",
+        "xl": "2rem",
+        "2xl": "2.5rem",
+        "3xl": "3rem",
+        "4xl": "4rem",
+        "5xl": "5rem",
+        "6xl": "6rem",
+      },
+      boxShadow: {
+        "custom-sm": "var(--shadow-sm)",
+        "custom": "var(--shadow)",
+        "custom-md": "var(--shadow-md)",
+        "custom-lg": "var(--shadow-lg)",
+        "custom-xl": "var(--shadow-xl)",
+        "custom-2xl": "var(--shadow-2xl)",
       },
       keyframes: {
         "accordion-down": {
