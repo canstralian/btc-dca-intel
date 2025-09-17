@@ -1,268 +1,136 @@
-btc-dca-trading-system (DCAlytics)
-
-https://img.shields.io/badge/license-Apache%202.0-blue.svg https://img.shields.io/badge/python-3.11%2B-blue https://img.shields.io/github/issues/canstralian/btc-dca-trading-system https://img.shields.io/github/stars/canstralian/btc-dca-trading-system?style=social https://img.shields.io/github/forks/canstralian/btc-dca-trading-system?style=social
-
-Smart, hedged BTC investing made simple.
 
 ---
 
-Table of Contents
-
-1. Introduction
-2. Quick Actions
-3. Features
-4. Installation
-5. API Examples
-6. Collaboration
-7. Project Structure
-8. Configuration
-9. Contributing
-10. License
+### **Project Overview**
+- **Name:** `btc-dca-trading-system` (DCAlytics)
+- **Purpose:** A cryptocurrency dashboard and simulation tool for dynamic dollar-cost averaging (DCA) combined with risk-managed hedging strategies.
+- **Features:**
+  - Portfolio visualization.
+  - Simulation of BTC trades.
+  - Comparison of DCA vs. HODL strategies.
+  - Backtesting with historical and live BTC data.
+  - Secure API endpoints with validation and authentication.
+  - Responsive UI (React or Streamlit).
 
 ---
 
-Introduction
-
-DCAlytics is an interactive cryptocurrency dashboard and simulation tool combining dynamic dollar-cost averaging (DCA) with risk-managed hedging strategies. The platform allows users to:
-
-· Visualize portfolio performance
-· Simulate BTC trades
-· Optimize investments while managing market volatility
-
-Built with a responsive frontend and a Python backend, the stack is friendly to React + Flask/FastAPI and PostgreSQL for durable state.
+### **Stack Details**
+- **Backend:** Python (FastAPI or Flask).
+- **Frontend:** React (or optional static HTML/Streamlit).
+- **Database:** PostgreSQL (recommended for production).
+- **Other Dependencies:** Node.js (for frontend), Git.
 
 ---
 
-Quick Actions
+### **Installation**
+#### **Backend Setup**
+1. Clone the repository.
+2. Create a Python virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/macOS
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+4. Launch the FastAPI server:
+   ```bash
+   uvicorn backend.main:app --reload --port 8000
+   ```
 
-Quick links for repository interaction:
-
-https://img.shields.io/badge/-Open%20Issue-blue?logo=github https://img.shields.io/badge/-Fork%20Repo-lightgrey?logo=github https://img.shields.io/badge/-Star%20Repo-yellow?logo=github
-
----
-
-Features
-
-· Dynamic DCA engine with configurable intervals
-· Hedging strategy support (adjustable hedge percentage)
-· Portfolio analytics and comparisons (DCA vs HODL)
-· Backtest engine using historical and live BTC data
-· Responsive UI (TailwindCSS + Chart.js or React + Chart.js)
-· Secure API endpoints with validation and authentication
-
----
-
-Installation
-
-Prerequisites
-
-· Python 3.11+
-· Node.js 18+ (for React frontend)
-· PostgreSQL (recommended for production)
-· Git
-
-Clone & Setup
-
-```bash
-git clone https://github.com/canstralian/btc-dca-trading-system.git
-cd btc-dca-trading-system
-```
-
-Backend Setup
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# venv\Scripts\activate  # Windows
-
-# Install dependencies
-pip install -r backend/requirements.txt
-
-# Run FastAPI server
-uvicorn backend.main:app --reload --port 8000
-```
-
-Frontend Setup
-
-Choose one of the following frontend options:
-
-Static HTML:
-
-```bash
-open frontend/index.html  # Or manually open in browser
-```
-
-React App:
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-Streamlit App:
-
-```bash
-pip install streamlit
-streamlit run frontend/app.py
-```
+#### **Frontend Setup**
+- **React App:**
+  ```bash
+  cd frontend
+  npm install
+  npm start
+  ```
+- **Static HTML (Quick Option):**
+  Open the file `frontend/index.html` manually in the browser.
+- **Streamlit App:**
+  ```bash
+  pip install streamlit
+  streamlit run frontend/app.py
+  ```
 
 ---
 
-API Examples
-
-FastAPI Backend (Recommended)
-
-```python
-from fastapi import FastAPI, HTTPException, Header
-from pydantic import BaseModel
-import os
-
-app = FastAPI()
-
-class SimulationRequest(BaseModel):
-    investment_amount: float
-    frequency: str
-    hedge_pct: int
-    period_months: int
-
-@app.post("/api/simulate")
-async def simulate(
-    request: SimulationRequest,
-    x_api_key: str = Header(...)
-):
-    if x_api_key != os.getenv("API_KEY"):
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    
-    # Your simulation logic here
-    return {"status": "success", "data": request.dict()}
-```
-
-React Frontend Component
-
-```jsx
-import React, { useState } from 'react';
-
-const SimulationButton = () => {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-
-  const runSimulation = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/simulate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.REACT_APP_API_KEY
-        },
-        body: JSON.stringify({
-          investment_amount: 100,
-          frequency: 'monthly',
-          hedge_pct: 20,
-          period_months: 12
-        })
-      });
-      
-      const data = await response.json();
-      setResult(data);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <button onClick={runSimulation} disabled={loading}>
-        {loading ? 'Running...' : 'Run Simulation'}
-      </button>
-      {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
-    </div>
-  );
-};
-```
+### **Security Recommendations**
+- Store secrets (e.g., API keys, database URLs) in environment variables.
+- Use HTTPS in production.
+- Rate-limit API requests to prevent abuse.
+- Rotate API keys regularly.
 
 ---
 
-Collaboration
+### **API Example**
+**FastAPI Simulation Endpoint:**
+- **Route:** `/api/simulate`
+- **Method:** `POST`
+- **Request:**
+  ```json
+  {
+    "investment_amount": 100.0,
+    "frequency": "monthly",
+    "hedge_pct": 20,
+    "period_months": 12
+  }
+  ```
+- **Headers:**
+  `x-api-key` (for authentication).
 
-We welcome contributions! Please see our Contributing Guidelines for details.
-
-Good First Issues
-
-· Add unit tests for trading engine
-· Implement API key rotation utility
-· Enhance Streamlit dashboard
-· Improve documentation
-
-Development Setup
-
-1. Fork the repository
-2. Create a feature branch: git checkout -b feature/amazing-feature
-3. Commit changes: git commit -m 'Add amazing feature'
-4. Push to branch: git push origin feature/amazing-feature
-5. Open a Pull Request
+Example code demonstrates the use of FastAPI with `pydantic` for validation and `os.getenv` for secure key management.
 
 ---
 
-Project Structure
+### **Frontend Example**
+The React component `SimulationButton` fetches simulation results from the FastAPI backend. Key highlights:
+- Uses `useState` for managing loading state and results.
+- Sends a `POST` request to the `/api/simulate` endpoint with headers and a JSON body.
+- Displays the results in a `<pre>` block.
 
+---
+
+### **Development Workflow**
+1. Fork the repository.
+2. Create a feature branch:
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. Commit changes and push to the branch:
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+4. Open a pull request.
+
+---
+
+### **Configuration**
+- Use a `.env` file for sensitive configurations:
+  ```env
+  DATABASE_URL=postgresql://user:password@localhost:5432/dcalytics
+  API_KEY=your-secure-api-key-here
+  BTC_API_URL=https://api.coingecko.com/api/v3
+  ```
+- Ensure the `.env` file is excluded from version control.
+
+---
+
+### **Project Structure**
+The directory layout is clean and modular:
 ```
 btc-dca-trading-system/
-├── backend/
-│   ├── main.py              # FastAPI application
-│   ├── trading_engine.py    # Core trading logic
-│   ├── models.py            # Data models
-│   └── requirements.txt
-├── frontend/
-│   ├── public/              # Static files
-│   ├── src/                 # React components
-│   ├── app.py               # Streamlit app
-│   └── package.json
-├── data/                    # Sample data
-├── docs/                    # Documentation
-└── tests/                   # Test cases
+├── backend/               # Backend code
+├── frontend/              # React or Streamlit frontend
+├── data/                  # Sample datasets
+├── docs/                  # Documentation
+└── tests/                 # Unit tests
 ```
 
 ---
 
-Configuration
-
-1. Copy .env.example to .env
-2. Update environment variables:
-
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/dcalytics
-API_KEY=your-secure-api-key-here
-BTC_API_URL=https://api.coingecko.com/api/v3
-```
-
-Security Recommendations:
-
-· Use environment variables for all secrets
-· Enable HTTPS in production
-· Implement rate limiting
-· Regularly rotate API keys
+### **Licensing**
+Licensed under the Apache License 2.0, ensuring open collaboration while maintaining clear guidelines for usage.
 
 ---
-
-Contributing
-
-1. Read our Code of Conduct
-2. Follow GitHub Flow
-3. Write tests for new features
-4. Update documentation accordingly
-5. Ensure all tests pass before submitting PR
-
----
-
-License
-
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
-
----
-
-Note: This is a simulation tool only. Not financial advice. Cryptocurrency investments carry significant risk.
