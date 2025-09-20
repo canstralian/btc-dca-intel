@@ -859,6 +859,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pionex Trading Integration routes
+  app.get("/api/pionex/account", isAuthenticated, async (req, res) => {
+    try {
+      // Note: This is a placeholder endpoint that would integrate with the Pionex client
+      // In production, you would need to:
+      // 1. Configure Pionex API credentials securely
+      // 2. Import and use the PionexTradeClient
+      // 3. Handle user-specific credentials
+      
+      // For now, return a mock response
+      res.json({
+        message: "Pionex integration endpoint",
+        status: "configured",
+        note: "This endpoint would connect to Pionex API with proper credentials"
+      });
+    } catch (error) {
+      handleError(error, res, "GET /api/pionex/account");
+    }
+  });
+
+  app.post("/api/pionex/dca/create", isAuthenticated, async (req, res) => {
+    try {
+      const { symbol, investmentAmount, frequencyHours } = req.body;
+      
+      if (!symbol || !investmentAmount || !frequencyHours) {
+        return res.status(400).json({
+          error: "Missing required parameters: symbol, investmentAmount, and frequencyHours are required",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate parameters
+      const parsedAmount = typeof investmentAmount === 'number' ? investmentAmount : parseFloat(investmentAmount);
+      const parsedFrequency = typeof frequencyHours === 'number' ? frequencyHours : parseInt(frequencyHours, 10);
+      
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({
+          error: "investmentAmount must be a positive number",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      if (isNaN(parsedFrequency) || parsedFrequency <= 0) {
+        return res.status(400).json({
+          error: "frequencyHours must be a positive number",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Mock response - in production this would use the PionexTradeClient
+      res.json({
+        success: true,
+        message: "DCA strategy created successfully",
+        botId: `mock_bot_${Date.now()}`,
+        config: {
+          symbol,
+          investmentAmount: parsedAmount,
+          frequencyHours: parsedFrequency
+        },
+        note: "This is a mock response. Production would use actual Pionex API."
+      });
+    } catch (error) {
+      handleError(error, res, "POST /api/pionex/dca/create");
+    }
+  });
+
+  app.post("/api/pionex/execute-dca", isAuthenticated, async (req, res) => {
+    try {
+      const { symbol = "BTCUSDT", amount } = req.body;
+      
+      if (!amount) {
+        return res.status(400).json({
+          error: "Missing required parameter: amount",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      const parsedAmount = typeof amount === 'number' ? amount : parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({
+          error: "amount must be a positive number",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Mock DCA execution - in production this would use the PionexTradeClient
+      res.json({
+        success: true,
+        message: "DCA executed successfully",
+        orderId: `mock_order_${Date.now()}`,
+        details: {
+          symbol,
+          amount: parsedAmount,
+          executionTime: new Date().toISOString()
+        },
+        note: "This is a mock response. Production would execute actual trades via Pionex API."
+      });
+    } catch (error) {
+      handleError(error, res, "POST /api/pionex/execute-dca");
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
