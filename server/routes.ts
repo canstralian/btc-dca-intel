@@ -1257,5 +1257,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize trading bot service
+  console.log("🤖 Initializing Trading Bot Service...");
+  // Note: In production, you might want to start this conditionally
+  // tradingBotService.start();
+  
   return httpServer;
 }

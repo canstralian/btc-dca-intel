@@ -14,6 +14,8 @@ import { MLPredictions } from "@/components/ml-predictions";
 import { MLDCAOptimizer } from "@/components/ml-dca-optimizer";
 import { TicketingSystem } from "@/components/ticketing-system";
 import { TradingBot } from "@/components/trading-bot";
+import { AdvancedHedging } from "@/components/advanced-hedging";
+import { AlertSystem } from "@/components/alert-system";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
@@ -96,6 +98,12 @@ export default function Dashboard() {
         {/* Trading Bot Section */}
         <TradingBot />
 
+        {/* Advanced Hedging Section */}
+        <AdvancedHedging />
+
+        {/* Alert System Section */}
+        <AlertSystem />
+
         {/* Performance Analytics */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <SimulationPanel />
@@ -116,11 +124,13 @@ export default function Dashboard() {
 
         {/* Ticketing System Section */}
         <Tabs defaultValue="performance-analytics" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="market-overview">Market Overview</TabsTrigger>
-            <TabsTrigger value="ml-optimizer">ML DCA Optimizer</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="market-overview">Market</TabsTrigger>
+            <TabsTrigger value="ml-optimizer">ML Optimizer</TabsTrigger>
             <TabsTrigger value="trading-bot">Trading Bot</TabsTrigger>
-            <TabsTrigger value="ticketing">IT Tickets</TabsTrigger>
+            <TabsTrigger value="hedging">Hedging</TabsTrigger>
+            <TabsTrigger value="alerts">Alerts</TabsTrigger>
+            <TabsTrigger value="ticketing">Tickets</TabsTrigger>
           </TabsList>
           <TabsContent value="market-overview">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -167,6 +177,14 @@ export default function Dashboard() {
 
           <TabsContent value="trading-bot">
             <TradingBot />
+          </TabsContent>
+
+          <TabsContent value="hedging">
+            <AdvancedHedging />
+          </TabsContent>
+
+          <TabsContent value="alerts">
+            <AlertSystem />
           </TabsContent>
 
           <TabsContent value="ticketing">
