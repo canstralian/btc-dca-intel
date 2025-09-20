@@ -12,7 +12,8 @@ import { PerformanceAnalytics } from "@/components/performance-analytics";
 import { AdvancedTools } from "@/components/advanced-tools";
 import { MLPredictions } from "@/components/ml-predictions";
 import { MLDCAOptimizer } from "@/components/ml-dca-optimizer";
-import { TicketingSystem } from "@/components/ticketing-system"; // Assuming TicketingSystem component is created
+import { TicketingSystem } from "@/components/ticketing-system";
+import { TradingBot } from "@/components/trading-bot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
@@ -92,6 +93,9 @@ export default function Dashboard() {
           <AutomatedDCA />
         </div>
 
+        {/* Trading Bot Section */}
+        <TradingBot />
+
         {/* Performance Analytics */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <SimulationPanel />
@@ -112,9 +116,10 @@ export default function Dashboard() {
 
         {/* Ticketing System Section */}
         <Tabs defaultValue="performance-analytics" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="market-overview">Market Overview</TabsTrigger>
             <TabsTrigger value="ml-optimizer">ML DCA Optimizer</TabsTrigger>
+            <TabsTrigger value="trading-bot">Trading Bot</TabsTrigger>
             <TabsTrigger value="ticketing">IT Tickets</TabsTrigger>
           </TabsList>
           <TabsContent value="market-overview">
@@ -158,6 +163,10 @@ export default function Dashboard() {
           </TabsContent>
           <TabsContent value="ml-optimizer">
             <MLDCAOptimizer />
+          </TabsContent>
+
+          <TabsContent value="trading-bot">
+            <TradingBot />
           </TabsContent>
 
           <TabsContent value="ticketing">
