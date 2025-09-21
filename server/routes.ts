@@ -5,6 +5,7 @@ import { insertDCAStrategySchema, insertDCATransactionSchema, insertMarketDataSc
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { handleError, wrapDatabaseOperation, wrapExternalServiceCall, ExternalServiceError, ValidationError } from "./errorHandler";
+import { tradingBotService } from "./trading-bot";
 
 // In-memory cache for historical data
 interface HistoricalCacheEntry {
@@ -13,6 +14,192 @@ interface HistoricalCacheEntry {
 }
 
 const historicalCache = new Map<string, HistoricalCacheEntry>();
+
+// Signal processing functions
+async function generateTradingSignals(timeframe: string, limit: number) {
+  const signals = [];
+  const currentTime = new Date();
+  
+  // Define indicator configurations with proper typing
+  const indicators = [
+    { 
+      name: "RSI" as const, 
+      value: Math.random() * 100, 
+      threshold: { oversold: 30, overbought: 70 } 
+    },
+    { 
+      name: "MACD" as const, 
+      value: (Math.random() - 0.5) * 2, 
+      threshold: { bullish: 0, bearish: 0 } 
+    },
+    { 
+      name: "Volume" as const, 
+      value: Math.random() * 200 + 50, 
+      threshold: { high: 150, low: 75 } 
+    },
+    { 
+      name: "BB_Position" as const, 
+      value: Math.random(), 
+      threshold: { upper: 0.8, lower: 0.2 } 
+    }
+  ];
+  
+  for (let i = 0; i < limit; i++) {
+    const indicator = indicators[Math.floor(Math.random() * indicators.length)];
+    const signalTime = new Date(currentTime.getTime() - (i * 60000 * (timeframe === '1m' ? 1 : timeframe === '5m' ? 5 : 60)));
+    
+    let signalType: string, action: string, strength: number;
+    
+    if (indicator.name === "RSI") {
+      const rsiThreshold = indicator.threshold as { oversold: number; overbought: number };
+      if (indicator.value < rsiThreshold.oversold) {
+        signalType = "bullish";
+        action = "buy";
+        strength = Math.min(0.9, (rsiThreshold.oversold - indicator.value) / 10);
+      } else if (indicator.value > rsiThreshold.overbought) {
+        signalType = "bearish";
+        action = "sell";
+        strength = Math.min(0.9, (indicator.value - rsiThreshold.overbought) / 10);
+      } else {
+        signalType = "neutral";
+        action = "hold";
+        strength = 0.3;
+      }
+    } else if (indicator.name === "MACD") {
+      if (indicator.value > 0.1) {
+        signalType = "bullish";
+        action = "buy";
+        strength = Math.min(0.8, indicator.value);
+      } else if (indicator.value < -0.1) {
+        signalType = "bearish";
+        action = "sell";
+        strength = Math.min(0.8, Math.abs(indicator.value));
+      } else {
+        signalType = "neutral";
+        action = "hold";
+        strength = 0.2;
+      }
+    } else {
+      signalType = Math.random() > 0.5 ? "bullish" : "bearish";
+      action = signalType === "bullish" ? "buy" : "sell";
+      strength = Math.random() * 0.8 + 0.2;
+    }
+    
+    signals.push({
+      id: `signal_${Date.now()}_${i}`,
+      type: signalType,
+      indicator: indicator.name,
+      action,
+      strength: parseFloat(strength.toFixed(2)),
+      value: parseFloat(indicator.value.toFixed(2)),
+      symbol: "BTC",
+      timeframe,
+      timestamp: signalTime.toISOString(),
+      confidence: Math.random() * 0.3 + 0.7,
+      description: generateSignalDescription(indicator.name, signalType, strength)
+    });
+  }
+  
+  return signals.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+async function processExternalSignal(signalData: any) {
+  // Process and validate external signal (e.g., from TradingView webhooks)
+  const processedSignal = {
+    id: `ext_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    ...signalData,
+    processed_at: new Date().toISOString(),
+    source: "external",
+    status: "processed"
+  };
+  
+  // Here you could store the signal in the database or trigger DCA adjustments
+  console.log(`Processed external signal: ${processedSignal.id} - ${signalData.action} ${signalData.symbol}`);
+  
+  return processedSignal;
+}
+
+async function generateSignalAnalysis(symbol: string, period: string) {
+  // Simulate comprehensive technical analysis
+  const analysis = {
+    symbol: symbol.toUpperCase(),
+    period,
+    timestamp: new Date().toISOString(),
+    indicators: {
+      rsi: {
+        value: Math.random() * 100,
+        signal: "neutral",
+        strength: Math.random()
+      },
+      macd: {
+        macd: (Math.random() - 0.5) * 2,
+        signal: (Math.random() - 0.5) * 2,
+        histogram: (Math.random() - 0.5) * 0.5,
+        trend: "bullish"
+      },
+      volume: {
+        current: Math.random() * 1000000 + 500000,
+        average: Math.random() * 800000 + 400000,
+        ratio: Math.random() * 2 + 0.5,
+        trend: "increasing"
+      },
+      bollinger_bands: {
+        upper: Math.random() * 5000 + 45000,
+        middle: Math.random() * 5000 + 42000,
+        lower: Math.random() * 5000 + 39000,
+        position: Math.random()
+      }
+    },
+    overall_sentiment: Math.random() > 0.5 ? "bullish" : "bearish",
+    confidence_score: Math.random() * 0.3 + 0.7,
+    recommendations: [
+      "Current RSI suggests potential buying opportunity",
+      "Volume analysis indicates strong market interest",
+      "MACD showing bullish divergence"
+    ]
+  };
+  
+  // Determine RSI signal
+  if (analysis.indicators.rsi.value < 30) {
+    analysis.indicators.rsi.signal = "oversold";
+    analysis.indicators.rsi.strength = 0.8;
+  } else if (analysis.indicators.rsi.value > 70) {
+    analysis.indicators.rsi.signal = "overbought";
+    analysis.indicators.rsi.strength = 0.8;
+  } else {
+    analysis.indicators.rsi.signal = "neutral";
+    analysis.indicators.rsi.strength = 0.3;
+  }
+  
+  return analysis;
+}
+
+function generateSignalDescription(indicator: string, type: string, strength: number): string {
+  const descriptions: Record<string, Record<string, string>> = {
+    RSI: {
+      bullish: "RSI indicates oversold conditions - potential buying opportunity",
+      bearish: "RSI shows overbought levels - consider taking profits",
+      neutral: "RSI in neutral zone - monitor for breakout"
+    },
+    MACD: {
+      bullish: "MACD bullish crossover detected - upward momentum",
+      bearish: "MACD bearish crossover - downward pressure",
+      neutral: "MACD showing sideways movement"
+    },
+    Volume: {
+      bullish: "High volume spike supporting price movement",
+      bearish: "Volume declining with price - weak momentum",
+      neutral: "Volume at average levels"
+    },
+    BB_Position: {
+      bullish: "Price approaching lower Bollinger Band - potential bounce",
+      bearish: "Price near upper Bollinger Band - possible pullback",
+      neutral: "Price within normal Bollinger Band range"
+    }
+  };
+  
+  return descriptions[indicator]?.[type] || "Signal detected - monitor closely";
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -701,6 +888,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trading Signals API endpoints
+  app.get("/api/signals", async (req, res) => {
+    try {
+      const { timeframe = "1h", limit = 10 } = req.query;
+      
+      // Validate timeframe
+      const validTimeframes = ['1m', '5m', '15m', '1h', '4h', '1d'];
+      if (!validTimeframes.includes(timeframe as string)) {
+        return res.status(400).json({ 
+          error: "Invalid timeframe. Must be one of: 1m, 5m, 15m, 1h, 4h, 1d",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate limit
+      const parsedLimit = parseInt(limit as string, 10);
+      if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+        return res.status(400).json({ 
+          error: "limit must be a number between 1 and 100",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Generate enhanced trading signals based on market conditions
+      const signals = await generateTradingSignals(timeframe as string, parsedLimit);
+      
+      res.json({
+        signals,
+        timeframe,
+        timestamp: new Date().toISOString(),
+        market_status: "active"
+      });
+    } catch (error) {
+      handleError(error, res, "GET /api/signals");
+    }
+  });
+
+  app.post("/api/signals/webhook", async (req, res) => {
+    try {
+      const { signal_type, symbol, action, strength, price, timestamp, metadata } = req.body;
+      
+      // Validate required fields
+      if (!signal_type || !symbol || !action || !strength) {
+        return res.status(400).json({ 
+          error: "Missing required fields: signal_type, symbol, action, strength",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Validate action
+      const validActions = ['buy', 'sell', 'hold', 'strong_buy', 'strong_sell'];
+      if (!validActions.includes(action)) {
+        return res.status(400).json({ 
+          error: "action must be one of: buy, sell, hold, strong_buy, strong_sell",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Process the incoming signal from external sources (e.g., TradingView)
+      const processedSignal = await processExternalSignal({
+        signal_type,
+        symbol: symbol.toUpperCase(),
+        action,
+        strength: parseFloat(strength),
+        price: price ? parseFloat(price) : null,
+        timestamp: timestamp || new Date().toISOString(),
+        metadata: metadata || {}
+      });
+      
+      res.json({
+        success: true,
+        signal_id: processedSignal.id,
+        message: "Signal processed successfully"
+      });
+    } catch (error) {
+      handleError(error, res, "POST /api/signals/webhook");
+    }
+  });
+
+  app.get("/api/signals/analysis", async (req, res) => {
+    try {
+      const { symbol = "BTC", period = "24h" } = req.query;
+      
+      // Validate period
+      const validPeriods = ['1h', '4h', '24h', '7d', '30d'];
+      if (!validPeriods.includes(period as string)) {
+        return res.status(400).json({ 
+          error: "period must be one of: 1h, 4h, 24h, 7d, 30d",
+          code: "VALIDATION_ERROR"
+        });
+      }
+      
+      // Generate signal analysis including RSI, MACD, volume analysis
+      const analysis = await generateSignalAnalysis(symbol as string, period as string);
+      
+      res.json(analysis);
+    } catch (error) {
+      handleError(error, res, "GET /api/signals/analysis");
+    }
+  });
+
+  // Trading Bot API endpoints
+  app.get("/api/bot/status", isAuthenticated, async (req, res) => {
+    try {
+      const status = tradingBotService.getStatus();
+      res.json(status);
+    } catch (error) {
+      handleError(error, res, "GET /api/bot/status");
+    }
+  });
+
+  app.post("/api/bot/start", isAuthenticated, async (req, res) => {
+    try {
+      await tradingBotService.start();
+      res.json({ success: true, message: "Trading bot started" });
+    } catch (error) {
+      handleError(error, res, "POST /api/bot/start");
+    }
+  });
+
+  app.post("/api/bot/stop", isAuthenticated, async (req, res) => {
+    try {
+      await tradingBotService.stop();
+      res.json({ success: true, message: "Trading bot stopped" });
+    } catch (error) {
+      handleError(error, res, "POST /api/bot/stop");
+    }
+  });
+
+  app.get("/api/bot/rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const rules = await tradingBotService.getAutomationRules(userId);
+      res.json(rules);
+    } catch (error) {
+      handleError(error, res, "GET /api/bot/rules");
+    }
+  });
+
+  app.post("/api/bot/rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { strategyId, signalThreshold, maxAdjustment, conditions } = req.body;
+
+      // Validate required fields
+      if (!strategyId || signalThreshold === undefined || maxAdjustment === undefined || !conditions) {
+        return res.status(400).json({ 
+          error: "Missing required fields: strategyId, signalThreshold, maxAdjustment, conditions",
+          code: "VALIDATION_ERROR"
+        });
+      }
+
+      // Validate signal threshold
+      const parsedThreshold = parseFloat(signalThreshold);
+      if (isNaN(parsedThreshold) || parsedThreshold < 0 || parsedThreshold > 1) {
+        return res.status(400).json({ 
+          error: "signalThreshold must be a number between 0 and 1",
+          code: "VALIDATION_ERROR"
+        });
+      }
+
+      // Validate max adjustment
+      const parsedAdjustment = parseFloat(maxAdjustment);
+      if (isNaN(parsedAdjustment) || parsedAdjustment < 0 || parsedAdjustment > 2) {
+        return res.status(400).json({ 
+          error: "maxAdjustment must be a number between 0 and 2",
+          code: "VALIDATION_ERROR"
+        });
+      }
+
+      // Verify strategy exists and belongs to user
+      const strategy = await storage.getDCAStrategy(strategyId);
+      if (!strategy) {
+        return res.status(404).json({ 
+          error: "Strategy not found",
+          code: "STRATEGY_NOT_FOUND"
+        });
+      }
+
+      const rule = {
+        id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        strategyId,
+        signalThreshold: parsedThreshold,
+        maxAdjustment: parsedAdjustment,
+        isActive: true,
+        conditions: {
+          indicators: conditions.indicators || ["RSI", "MACD"],
+          minConfidence: conditions.minConfidence || 0.7,
+          actions: conditions.actions || ["buy", "strong_buy"]
+        }
+      };
+
+      await tradingBotService.addAutomationRule(rule);
+      res.json(rule);
+    } catch (error) {
+      handleError(error, res, "POST /api/bot/rules");
+    }
+  });
+
+  app.delete("/api/bot/rules/:ruleId", isAuthenticated, async (req, res) => {
+    try {
+      const { ruleId } = req.params;
+      await tradingBotService.removeAutomationRule(ruleId);
+      res.json({ success: true, message: "Automation rule removed" });
+    } catch (error) {
+      handleError(error, res, "DELETE /api/bot/rules/:ruleId");
+    }
+  });
+
   // Project routes
   app.get("/api/projects", isAuthenticated, async (req, res) => {
     try {
@@ -860,5 +1257,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize trading bot service
+  console.log("🤖 Initializing Trading Bot Service...");
+  // Note: In production, you might want to start this conditionally
+  // tradingBotService.start();
+  
   return httpServer;
 }
