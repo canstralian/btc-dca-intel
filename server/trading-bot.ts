@@ -1,5 +1,4 @@
 import { storage } from "./storage";
-import { insertDCATransactionSchema } from "@shared/schema";
 
 interface TradingSignal {
   id: string;
@@ -12,6 +11,12 @@ interface TradingSignal {
   confidence: number;
 }
 
+interface AutomationRuleConditions {
+  indicators: string[];
+  minConfidence: number;
+  actions: string[];
+}
+
 interface AutomationRule {
   id: string;
   userId: string;
@@ -19,22 +24,28 @@ interface AutomationRule {
   signalThreshold: number;
   maxAdjustment: number;
   isActive: boolean;
-  conditions: {
-    indicators: string[];
-    minConfidence: number;
-    actions: string[];
-  };
+  conditions: AutomationRuleConditions;
 }
 
+const PROCESS_INTERVAL_MS = 30_000;
+const MINUTES_15_MS = 15 * 60 * 1000;
+
+/**
+ * Orchestrates trading automation by pairing incoming signals with DCA rules
+ * and executing trades when thresholds are met.
+ */
 class TradingBotService {
   private rules: Map<string, AutomationRule> = new Map();
-  private isRunning: boolean = false;
+  private isRunning = false;
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor() {
     this.loadAutomationRules();
   }
 
+  /**
+   * Starts the automation loop if it is not already running.
+   */
   async start() {
     if (this.isRunning) {
       console.log("Trading bot is already running");
@@ -44,15 +55,13 @@ class TradingBotService {
     this.isRunning = true;
     console.log("🤖 Trading Bot Service started");
 
-    // Run signal processing every 30 seconds
-    this.intervalId = setInterval(async () => {
-      await this.processSignals();
-    }, 30000);
-
-    // Initial run
+    this.intervalId = setInterval(() => void this.processSignals(), PROCESS_INTERVAL_MS);
     await this.processSignals();
   }
 
+  /**
+   * Stops the automation loop and prevents additional processing cycles.
+   */
   async stop() {
     if (!this.isRunning) {
       console.log("Trading bot is not running");
@@ -67,28 +76,28 @@ class TradingBotService {
     console.log("🤖 Trading Bot Service stopped");
   }
 
+  /**
+   * Fetches trading signals and evaluates them against all active rules.
+   */
   async processSignals() {
     try {
       console.log("🔍 Processing trading signals...");
-      
-      // Fetch current market signals
       const signals = await this.fetchCurrentSignals();
-      
-      // Process each active automation rule
-      const rules = Array.from(this.rules.values());
-      for (const rule of rules) {
-        if (!rule.isActive) continue;
-        
-        await this.processRuleAgainstSignals(rule, signals);
-      }
+
+      await Promise.all(
+        Array.from(this.rules.values())
+          .filter(rule => rule.isActive)
+          .map(rule => this.processRuleAgainstSignals(rule, signals))
+      );
     } catch (error) {
       console.error("Error processing signals:", error);
     }
   }
 
+  /**
+   * TODO: Replace mock signal generation with live signal ingestion from telemetry services.
+   */
   private async fetchCurrentSignals(): Promise<TradingSignal[]> {
-    // In a real implementation, this would fetch from your signals API
-    // For now, we'll simulate some signals
     return [
       {
         id: `signal_${Date.now()}`,
@@ -105,34 +114,20 @@ class TradingBotService {
 
   private async processRuleAgainstSignals(rule: AutomationRule, signals: TradingSignal[]) {
     try {
-      // Filter signals based on rule conditions
-      const relevantSignals = signals.filter(signal => 
-        rule.conditions.indicators.includes(signal.indicator) &&
-        rule.conditions.actions.includes(signal.action) &&
-        signal.confidence >= rule.conditions.minConfidence &&
-        signal.strength >= rule.signalThreshold
-      );
-
-      if (relevantSignals.length === 0) {
-        return;
-      }
+      const relevantSignals = this.filterSignals(signals, rule.conditions, rule.signalThreshold);
+      if (relevantSignals.length === 0) return;
 
       console.log(`📊 Found ${relevantSignals.length} relevant signals for rule ${rule.id}`);
 
-      // Get the DCA strategy
       const strategy = await storage.getDCAStrategy(rule.strategyId);
       if (!strategy || !strategy.isActive) {
         console.log(`Strategy ${rule.strategyId} not found or inactive`);
         return;
       }
 
-      // Calculate adjustment based on signal strength
-      const avgSignalStrength = relevantSignals.reduce((sum, s) => sum + s.strength, 0) / relevantSignals.length;
-      const adjustment = Math.min(rule.maxAdjustment, avgSignalStrength);
-      
-      // Determine if we should execute a DCA transaction
+      const adjustment = this.calculateAdjustment(relevantSignals, rule.maxAdjustment);
       const shouldExecute = await this.shouldExecuteTransaction(rule, relevantSignals, adjustment);
-      
+
       if (shouldExecute) {
         await this.executeDCATransaction(rule, strategy, adjustment, relevantSignals[0]);
       }
@@ -141,52 +136,67 @@ class TradingBotService {
     }
   }
 
+  private filterSignals(
+    signals: TradingSignal[],
+    conditions: AutomationRuleConditions,
+    signalThreshold: number
+  ) {
+    return signals.filter(signal =>
+      conditions.indicators.includes(signal.indicator) &&
+      conditions.actions.includes(signal.action) &&
+      signal.confidence >= conditions.minConfidence &&
+      signal.strength >= signalThreshold
+    );
+  }
+
+  private calculateAdjustment(signals: TradingSignal[], maxAdjustment: number) {
+    const averageStrength = this.calculateAverage(signals.map(signal => signal.strength));
+    return Math.min(maxAdjustment, averageStrength);
+  }
+
+  private calculateAverage(values: number[]) {
+    const total = values.reduce((sum, value) => sum + value, 0);
+    return values.length ? total / values.length : 0;
+  }
+
   private async shouldExecuteTransaction(
-    rule: AutomationRule, 
-    signals: TradingSignal[], 
+    rule: AutomationRule,
+    signals: TradingSignal[],
     adjustment: number
   ): Promise<boolean> {
-    // Basic logic to prevent over-trading
     const recentTransactions = await storage.getDCATransactions(rule.strategyId);
     const lastTransaction = recentTransactions[0];
-    
-    if (lastTransaction && lastTransaction.executedAt) {
+
+    if (lastTransaction?.executedAt) {
       const timeSinceLastTransaction = Date.now() - new Date(lastTransaction.executedAt).getTime();
-      const minInterval = 15 * 60 * 1000; // 15 minutes minimum between transactions
-      
-      if (timeSinceLastTransaction < minInterval) {
+      if (timeSinceLastTransaction < MINUTES_15_MS) {
         console.log(`Skipping transaction for rule ${rule.id}: too soon since last transaction`);
         return false;
       }
     }
 
-    // Check if signals are strong enough
-    const avgConfidence = signals.reduce((sum, s) => sum + s.confidence, 0) / signals.length;
+    const avgConfidence = this.calculateAverage(signals.map(signal => signal.confidence));
     return avgConfidence >= 0.7 && adjustment >= 0.5;
   }
 
   private async executeDCATransaction(
-    rule: AutomationRule, 
-    strategy: any, 
-    adjustment: number, 
+    rule: AutomationRule,
+    strategy: any,
+    adjustment: number,
     signal: TradingSignal
   ) {
     try {
-      // Calculate adjusted amount based on signal strength
       const baseAmount = parseFloat(strategy.amount);
-      const adjustedAmount = baseAmount * (1 + (adjustment - 0.5)); // Adjust by ±50% based on signal
-      
-      // Get current BTC price (mock for now)
-      const currentPrice = 45000 + (Math.random() - 0.5) * 10000; // Mock price
+      const adjustedAmount = baseAmount * (1 + (adjustment - 0.5));
+      const currentPrice = 45_000 + (Math.random() - 0.5) * 10_000;
       const btcAmount = adjustedAmount / currentPrice;
-      
+
       console.log(`🚀 Executing DCA transaction for strategy ${strategy.id}:`);
       console.log(`   Amount: $${adjustedAmount.toFixed(2)} (adjusted from $${baseAmount})`);
       console.log(`   BTC Price: $${currentPrice.toFixed(2)}`);
       console.log(`   BTC Amount: ${btcAmount.toFixed(8)}`);
       console.log(`   Signal: ${signal.indicator} ${signal.action} (strength: ${signal.strength})`);
 
-      // Create transaction record
       const transaction = await storage.createDCATransaction({
         strategyId: strategy.id,
         amount: adjustedAmount.toFixed(2),
@@ -195,27 +205,21 @@ class TradingBotService {
       });
 
       console.log(`✅ Transaction created: ${transaction.id}`);
-      
-      // In a real implementation, you would:
-      // 1. Execute the actual trade via exchange API
-      // 2. Update portfolio balances
-      // 3. Send notifications to user
-      // 4. Log the transaction with signal metadata
-      
+
+      // TODO: Execute exchange API trade and capture response metadata for auditing.
+      // TODO: Attach observability hooks (metrics + tracing) for transaction lifecycle events.
     } catch (error) {
       console.error(`Error executing DCA transaction:`, error);
     }
   }
 
   private async loadAutomationRules() {
-    // In a real implementation, load from database
-    // For now, create some default rules
     const defaultRule: AutomationRule = {
       id: "default-btc-rule",
       userId: "default-user",
       strategyId: "default-strategy",
       signalThreshold: 0.6,
-      maxAdjustment: 0.5, // Max 50% adjustment
+      maxAdjustment: 0.5,
       isActive: true,
       conditions: {
         indicators: ["RSI", "MACD", "Volume"],
@@ -226,6 +230,7 @@ class TradingBotService {
 
     this.rules.set(defaultRule.id, defaultRule);
     console.log(`Loaded ${this.rules.size} automation rules`);
+    // TODO: Persist automation rules to durable storage instead of in-memory defaults.
   }
 
   async addAutomationRule(rule: AutomationRule) {
